@@ -55,3 +55,7 @@ AGENTS.local.md
 .cursorrules
 .cursorignore
 .cursorindexingignore
+
+# From the GitHub template
+.pnp.js
+.env*.local
