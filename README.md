@@ -52,7 +52,6 @@ GeekOAuth client `geek-social`:
 | | Redirect URI | Post-logout redirect URI |
 |---|---|---|
 | Production | `https://geek-social.geekatyourspot.com/auth/callback` | `https://geek-social.geekatyourspot.com/signed-out` |
-| Vercel default | `https://geek-social.vercel.app/auth/callback` | `https://geek-social.vercel.app/signed-out` |
 | Local | `http://localhost:3006/auth/callback` | `http://localhost:3006/signed-out` |
 
 Meta app, Valid OAuth Redirect URIs: `<origin>/connect/meta/callback` for each origin above. The
@@ -60,7 +59,11 @@ address is taken from the origin the browser is on, so the connect returns to th
 session.
 
 GeekAPI must allow these origins for the hub: `https://geek-social.geekatyourspot.com`,
-`https://geek-social.vercel.app`, `http://localhost:3006`.
+`http://localhost:3006`.
+
+Do not register `https://geek-social.vercel.app`: that host is not this project's (this project's
+Vercel addresses are `geek-social-coral.vercel.app` and the production host), so a redirect there
+would hand sign-in codes to whoever owns it. See `AUDIT.md`.
 
 ## Commands
 

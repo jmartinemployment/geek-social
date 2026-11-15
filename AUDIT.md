@@ -3,6 +3,21 @@
 Scope: the unfinished items in `plans/geek-social-engagement-agent-2026-11-08.md`, and this repo at
 `0720473`. Each finding says how it was checked. "Not verified" means no check was run.
 
+## Status of the findings
+
+| # | Finding | Status |
+|---|---|---|
+| 1 | `geek-social.vercel.app` redirect URI | Removed from this README and `.env.example`. **Still registered on the GeekOAuth client and the Meta app; only you can remove it.** |
+| 2 | Outage signs everyone out | Fixed: `proxy.ts` clears the cookies only on `invalid_grant` and the like (test added) |
+| 3 | Hub gives up after about 19 seconds | Fixed: it retries every 30 seconds for as long as it is down (test added) |
+| 4 | Phase 6 proof and its tests | Open |
+| 5 | Proxy leaves `/api/social/` | Fixed: `.` and `..` segments answer 400 (test added) |
+| 6 | Contract drift | Fixed except the `spam` auto-send question, which is yours to decide |
+| 7 | Refresh-token rotation race | Open, unverified |
+| 8 | No CI, no component tests | Open |
+
+After the fixes: typecheck and lint clean, 22 of 22 tests pass, build succeeds.
+
 ## Findings, most severe first
 
 ### 1. A redirect URI points at a domain this project does not own (high)
