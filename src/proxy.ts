@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { ACCESS_COOKIE, REFRESH_COOKIE, cookieOpts } from "@/lib/auth/cookies";
 import { authConfig } from "@/lib/config";
-import { accessCookieMaxAge } from "@/services/auth-tokens";
+import { accessCookieMaxAge, isSessionDeadResponse } from "@/services/auth-tokens";
 
 /**
  * Refreshes the access token before the request reaches any Server Component.
@@ -35,8 +35,11 @@ export async function proxy(request: NextRequest) {
       cache: "no-store",
     });
     if (!res.ok) {
-      // The refresh token is spent or revoked. Clear it so the next hop is a clean sign-in
-      // rather than another doomed refresh.
+      // Only an answer that says the refresh token is spent or revoked ends the session. A 5xx or
+      // any other refusal is not proof, and clearing the cookie would sign the person out of a
+      // session GeekOAuth could still honour once it is back. Same rule as getAccessTokenWithRefresh.
+      if (!isSessionDeadResponse(await res.text())) return NextResponse.next();
+      // Clear it so the next hop is a clean sign-in rather than another doomed refresh.
       const dead = NextResponse.next();
       dead.cookies.set(REFRESH_COOKIE, "", cookieOpts.clear);
       dead.cookies.set(ACCESS_COOKIE, "", cookieOpts.clear);

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getAccessTokenWithRefresh } from "@/lib/auth/session";
 import { apiConfig } from "@/lib/config";
+import { socialTargetPath } from "@/lib/social/proxy-path";
 
 /**
  * Same-origin proxy to GeekAPI's GeekSocial routes: /api/social/<path> here is
@@ -14,10 +15,14 @@ import { apiConfig } from "@/lib/config";
 export const maxDuration = 300;
 
 async function forward(request: NextRequest, path: string[]): Promise<Response> {
-  const targetUrl = new URL(
-    `/api/social/${path.map((segment) => encodeURIComponent(segment)).join("/")}`,
-    apiConfig.baseUrl,
-  );
+  let targetPath: string;
+  try {
+    targetPath = socialTargetPath(path);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return Response.json({ error: detail }, { status: 400 });
+  }
+  const targetUrl = new URL(targetPath, apiConfig.baseUrl);
   targetUrl.search = request.nextUrl.search;
 
   let token: string | null;

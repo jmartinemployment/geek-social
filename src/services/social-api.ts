@@ -180,43 +180,22 @@ export const listDrafts = (status: DraftStatus, accountId: string | null) =>
 
 export const getDraft = (draftId: string) => request<ReplyDraft>(`/drafts/${id(draftId)}`);
 
-/**
- * Saves new text on a pending draft. The contract does not state what a successful save returns, so
- * nothing is read from it: the caller reads the draft again with getDraft.
- */
-export async function saveDraftText(draftId: string, draftText: string): Promise<void> {
-  const response = await fetchRaw(`/drafts/${id(draftId)}`, "PUT", { draftText });
-  if (!response.ok) throw refusalFrom(response.status, response.statusText, await response.text());
-}
+/** Saves new text on a pending draft. The Reviewer checks it first; a refusal is 422 review_refused. */
+export const saveDraftText = (draftId: string, draftText: string) =>
+  send<ReplyDraft>("PUT", `/drafts/${id(draftId)}`, { draftText });
 
 export const approveDraft = (draftId: string) =>
   send<ApproveResult>("POST", `/drafts/${id(draftId)}/approve`);
 
-/**
- * Sends an approved draft a limit held back. The contract names the route but not its answer; the
- * screen accepts the approve route's `{ draft, send }` or a bare send outcome, and refuses anything
- * else by name rather than guessing.
- */
+/** Sends an approved draft a limit held back. GeekAPI answers `{ draft, send }`, as approve does. */
 export async function sendDraft(draftId: string): Promise<SendOutcome> {
-  const answer = await send<unknown>("POST", `/drafts/${id(draftId)}/send`);
-  if (answer && typeof answer === "object") {
-    const fields = answer as Record<string, unknown>;
-    if (fields.send && typeof fields.send === "object") return fields.send as SendOutcome;
-    if (typeof fields.sent === "boolean") return answer as SendOutcome;
-  }
-  throw new SocialApiError(
-    "GeekAPI answered the send with neither a send outcome nor { draft, send }. Read the draft to see where it stands.",
-    200,
-    null,
-    [],
-  );
+  const answer = await send<ApproveResult>("POST", `/drafts/${id(draftId)}/send`);
+  return answer.send;
 }
 
-/** Rejects a pending or approved draft. As with a save, the caller reads the draft again. */
-export async function rejectDraft(draftId: string): Promise<void> {
-  const response = await fetchRaw(`/drafts/${id(draftId)}/reject`, "POST", {});
-  if (!response.ok) throw refusalFrom(response.status, response.statusText, await response.text());
-}
+/** Rejects a pending or approved draft. */
+export const rejectDraft = (draftId: string) =>
+  send<ReplyDraft>("POST", `/drafts/${id(draftId)}/reject`);
 
 // Comments
 
@@ -244,20 +223,6 @@ export const publishPost = (accountId: string, post: LinkPost) =>
 
 export const listAudit = (accountId: string | null) =>
   request<AuditRow[]>(`/audit${query({ accountId, limit: LIST_LIMIT })}`);
-
-async function fetchRaw(path: string, method: "POST" | "PUT", payload: unknown): Promise<Response> {
-  try {
-    return await fetch(`${API_BASE}${path}`, {
-      method,
-      cache: "no-store",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    throw new SocialApiError(`Could not reach this app's server: ${detail}`, 0, null, []);
-  }
-}
 
 /** The sentence to show for any failure. */
 export function errorText(err: unknown): string {

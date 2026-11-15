@@ -28,10 +28,24 @@ async function hubAccessToken(): Promise<string> {
 export const HUB_MESSAGES = ["draftChanged", "commentChanged", "accountChanged"] as const;
 export type HubMessageName = (typeof HUB_MESSAGES)[number];
 
+const RECONNECT_DELAYS_MS = [0, 1000, 3000, 5000, 10000];
+const RECONNECT_CAP_MS = 30000;
+
+/**
+ * How long to wait before reconnect attempt number `previousRetryCount + 1`. It never gives up: a
+ * GeekAPI redeploy outlasts a short list of attempts, and a connection that stops there leaves the
+ * operator with no new drafts until they notice the banner. The banner shows "reconnecting" meanwhile.
+ */
+export function reconnectDelay(previousRetryCount: number): number {
+  return RECONNECT_DELAYS_MS[previousRetryCount] ?? RECONNECT_CAP_MS;
+}
+
 export function createSocialHubConnection(): HubConnection {
   return new HubConnectionBuilder()
     .withUrl(apiConfig.socialHubUrl, { accessTokenFactory: hubAccessToken })
-    .withAutomaticReconnect([0, 1000, 3000, 5000, 10000])
+    .withAutomaticReconnect({
+      nextRetryDelayInMilliseconds: (context) => reconnectDelay(context.previousRetryCount),
+    })
     .configureLogging(LogLevel.Warning)
     .build();
 }

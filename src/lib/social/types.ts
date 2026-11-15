@@ -186,8 +186,10 @@ export interface OrchestratorStatus {
   draftsPending: number;
   draftsForAPerson: number;
   draftsRefused: number;
+  draftsAutoApproved: number;
   draftsSent: number;
   draftsSendFailed: number;
+  sendsHeld: number;
   failures: OrchestratorFailure[];
 }
 
