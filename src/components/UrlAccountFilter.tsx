@@ -8,7 +8,16 @@ import type { SocialAccount } from "@/lib/social/types";
  * The account filter, kept in the address (`?account=`) so the page the server renders is the one the person
  * asked for and the link can be shared. Choosing an account changes the address; the server does the rest.
  */
-export function UrlAccountFilter({ accounts, value }: { accounts: SocialAccount[]; value: string | null }) {
+export function UrlAccountFilter({
+  accounts,
+  value,
+  allowAll = true,
+}: {
+  accounts: SocialAccount[];
+  value: string | null;
+  /** False for a list GeekAPI only gives for one account: there is no "All accounts" choice. */
+  allowAll?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const current = useSearchParams();
@@ -17,6 +26,7 @@ export function UrlAccountFilter({ accounts, value }: { accounts: SocialAccount[
     <AccountFilter
       accounts={accounts}
       accountsError={null}
+      allowAll={allowAll}
       value={value}
       onChange={(accountId) => {
         const next = new URLSearchParams(current.toString());

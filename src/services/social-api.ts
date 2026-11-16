@@ -159,10 +159,6 @@ function query(params: Record<string, string | number | null | undefined>): stri
 
 const id = (value: string) => encodeURIComponent(value);
 
-// Status
-
-export const getStatus = () => request<SocialStatus>("/status");
-
 // Accounts
 
 /** The account calls over one transport, so the browser and the server make them the same way. */
@@ -279,19 +275,33 @@ export const likeComment = browserComments.like;
 
 // Posts
 
-/** GeekAPI refuses this route without an account (400 "accountId is required"), so one is required here. */
-export const listPosts = (accountId: string) =>
-  request<StoredPost[]>(`/posts${query({ accountId, limit: LIST_LIMIT })}`);
+/** The post calls over one transport, so the browser and the server make them the same way. */
+export function postApi(call: Transport) {
+  return {
+    /** GeekAPI refuses this route without an account (400 "accountId is required"), so one is required here. */
+    list: (accountId: string) => call<StoredPost[]>("GET", `/posts${query({ accountId, limit: LIST_LIMIT })}`),
+    suggestCopy: (payload: PostCopyRequest) => call<PostCopyResult>("POST", "/posts/copy", payload),
+    publish: (accountId: string, post: LinkPost) => call<StoredPost>("POST", "/posts", { accountId, post }),
+  };
+}
 
-export const suggestPostCopy = (payload: PostCopyRequest) =>
-  send<PostCopyResult>("POST", "/posts/copy", payload);
+const browserPosts = postApi(browserTransport);
+export const listPosts = browserPosts.list;
+export const suggestPostCopy = browserPosts.suggestCopy;
+export const publishPost = browserPosts.publish;
 
-export const publishPost = (accountId: string, post: LinkPost) =>
-  send<StoredPost>("POST", "/posts", { accountId, post });
+// Status and audit
 
-// Audit
+/** The status call over one transport, so the browser and the server make it the same way. */
+export function statusApi(call: Transport) {
+  return { get: () => call<SocialStatus>("GET", "/status") };
+}
 
-export const listAudit = (accountId: string | null) =>
-  request<AuditRow[]>(`/audit${query({ accountId, limit: LIST_LIMIT })}`);
+export function auditApi(call: Transport) {
+  return { list: (accountId: string | null) => call<AuditRow[]>("GET", `/audit${query({ accountId, limit: LIST_LIMIT })}`) };
+}
+
+export const getStatus = statusApi(browserTransport).get;
+export const listAudit = auditApi(browserTransport).list;
 
 export { errorText } from "@/lib/errors";

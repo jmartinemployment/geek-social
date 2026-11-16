@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { useState } from "react";
 import { useHubEvent } from "@/components/SocialHubProvider";
-import { Badge, ErrorNote, Notice, formatTime, quietButton, secondaryButton } from "@/components/ui";
+import { useServerRefresh } from "@/lib/hooks/use-server-refresh";
+import { Time } from "@/components/Time";
+import { Badge, ErrorNote, Notice, quietButton, secondaryButton } from "@/components/ui";
 import type { CommentTab } from "@/lib/social/comments";
 import { isRerunnable } from "@/lib/social/comments";
 import type { SocialAccount, SocialCommentView } from "@/lib/social/types";
@@ -29,9 +30,8 @@ export function CommentsView({
   /** How a card changes a comment: Server Actions in the app, stand-ins in a test. */
   actions: CommentActions;
 }) {
-  const router = useRouter();
   const [notices, setNotices] = useState<string[]>([]);
-  const refresh = () => startTransition(() => router.refresh());
+  const { refresh } = useServerRefresh();
   useHubEvent("commentChanged", refresh);
   useHubEvent("resync", refresh);
 
@@ -147,8 +147,12 @@ function CommentCard({
         )}
         <span className="text-xs text-muted">
           {engagementKindWords(comment.kind)} · {accountLabel} · {platformWords(comment.platform)} ·{" "}
-          {formatTime(comment.occurredAt)}
-          {comment.triagedAt ? ` · triaged ${formatTime(comment.triagedAt)}` : ""}
+          <Time value={comment.occurredAt} />
+          {comment.triagedAt ? (
+            <>
+              {" "}· triaged <Time value={comment.triagedAt} />
+            </>
+          ) : null}
         </span>
       </header>
 

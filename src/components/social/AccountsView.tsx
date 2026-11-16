@@ -1,15 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useState } from "react";
 import { useHubEvent } from "@/components/SocialHubProvider";
+import { useServerRefresh } from "@/lib/hooks/use-server-refresh";
+import { Time } from "@/components/Time";
 import {
   Badge,
   ErrorNote,
   Notice,
   Panel,
   checkboxClass,
-  formatTime,
   primaryButton,
   quietButton,
   secondaryButton,
@@ -56,8 +56,7 @@ export function ConnectPanel({ actions }: { actions: AccountActions }) {
  * server read the list again; saving settings does the same through the action. Nothing here polls.
  */
 export function AccountsView({ accounts, actions }: { accounts: SocialAccount[]; actions: AccountActions }) {
-  const router = useRouter();
-  const refresh = () => startTransition(() => router.refresh());
+  const { refresh } = useServerRefresh();
   useHubEvent("accountChanged", refresh);
   useHubEvent("resync", refresh);
 
@@ -146,8 +145,12 @@ function AccountCard({ account, actions }: { account: SocialAccount; actions: Ac
         <Badge tone={account.status === "connected" ? "good" : "bad"}>{accountStatusWords(account.status)}</Badge>
         {account.sendsDisabled ? <Badge tone="warn">Sends paused</Badge> : null}
         <span className="text-xs text-muted">
-          {platformWords(account.platform)} · id {account.platformAccountId} · connected {formatTime(account.connectedAt)}
-          {account.tokenExpiresAt ? ` · sign-in expires ${formatTime(account.tokenExpiresAt)}` : ""}
+          {platformWords(account.platform)} · id {account.platformAccountId} · connected <Time value={account.connectedAt} />
+          {account.tokenExpiresAt ? (
+            <>
+              {" "}· sign-in expires <Time value={account.tokenExpiresAt} />
+            </>
+          ) : null}
         </span>
       </header>
 

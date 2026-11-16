@@ -4,12 +4,12 @@ import { useState } from "react";
 import {
   Badge,
   ErrorNote,
-  formatTime,
   inputClass,
   primaryButton,
   secondaryButton,
 } from "@/components/ui";
 import { useToast } from "@/components/Toaster";
+import { Time } from "@/components/Time";
 import { mayHaveHappened } from "@/lib/social/outcome";
 import type { ReplyDraft, SendOutcome } from "@/lib/social/types";
 import {
@@ -175,15 +175,19 @@ export function DraftCard({
         <Badge tone={CATEGORY_TONE[draft.category] ?? "neutral"}>{categoryWords(draft.category)}</Badge>
         <Badge tone={STATUS_TONE[draft.status] ?? "neutral"}>{draftStatusWords(draft.status)}</Badge>
         <span className="text-xs text-muted">
-          {accountLabel} · {platformWords(draft.platform)} · drafted {formatTime(draft.createdAt)}
-          {draft.decidedAt ? ` · decided ${formatTime(draft.decidedAt)}` : ""}
+          {accountLabel} · {platformWords(draft.platform)} · drafted <Time value={draft.createdAt} />
+          {draft.decidedAt ? (
+            <>
+              {" "}· decided <Time value={draft.decidedAt} />
+            </>
+          ) : null}
         </span>
       </header>
 
       <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2">
         <p className="text-xs font-semibold text-muted">
           {comment.authorDisplayName ?? "Commenter name removed after its retention period"} wrote,{" "}
-          {formatTime(comment.occurredAt)}:
+          <Time value={comment.occurredAt} />:
         </p>
         {comment.text === null ? (
           <p className="mt-1 text-sm italic text-muted">Comment text removed after its retention period</p>
@@ -263,7 +267,7 @@ export function DraftCard({
         <p className="mt-2 text-xs text-muted">Reply id on the platform: {draft.sentPlatformCommentId}</p>
       ) : null}
       {draft.status === "sending" && draft.sendingStartedAt ? (
-        <p className="mt-2 text-xs text-muted">Sending since {formatTime(draft.sendingStartedAt)}</p>
+        <p className="mt-2 text-xs text-muted">Sending since <Time value={draft.sendingStartedAt} /></p>
       ) : null}
 
       {outcome ? <SendOutcomeNote outcome={outcome} /> : null}
@@ -375,7 +379,7 @@ function SendOutcomeNote({ outcome }: { outcome: SendOutcome }) {
       <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
         <span className="font-semibold">Approved and held back by a send limit.</span>{" "}
         {outcome.retryAfter
-          ? `It goes out at the next wake after ${formatTime(outcome.retryAfter)}, or press Send then.`
+          ? <>It goes out at the next wake after <Time value={outcome.retryAfter} />, or press Send then.</>
           : "It goes out at the next wake, or press Send."}
         {outcome.code ? ` (${failureWords(outcome.code)})` : ""}
         {outcome.error ? ` ${outcome.error}` : ""}

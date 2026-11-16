@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { useState } from "react";
 import { useHubEvent } from "@/components/SocialHubProvider";
+import { useServerRefresh } from "@/lib/hooks/use-server-refresh";
 import { DraftCard } from "@/components/social/DraftCard";
 import { Notice, quietButton } from "@/components/ui";
 import { LIST_LIMIT } from "@/services/social-api";
@@ -30,7 +30,6 @@ export function InboxView({
   /** How a card changes a draft: Server Actions in the app, stand-ins in a test. */
   actions: DraftActions;
 }) {
-  const router = useRouter();
   const [state, setState] = useState<{ base: ReplyDraft[]; acted: ReadonlyMap<string, ReplyDraft> }>({
     base: drafts,
     acted: new Map(),
@@ -47,7 +46,7 @@ export function InboxView({
     ...[...state.acted.values()].filter((d) => !drafts.some((s) => s.id === d.id)),
   ];
 
-  const refresh = () => startTransition(() => router.refresh());
+  const { refresh } = useServerRefresh();
   useHubEvent("draftChanged", refresh);
   useHubEvent("resync", refresh);
 

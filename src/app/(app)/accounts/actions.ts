@@ -6,7 +6,7 @@ import { verifySession } from "@/lib/dal";
 import { metaRedirectUri } from "@/lib/server/meta-redirect";
 import { serverTransport } from "@/lib/server/social-api";
 import { run, type ActionResult } from "@/lib/social/action-result";
-import type { AccountSettings, ResyncResult, SocialAccount } from "@/lib/social/types";
+import type { AccountSettings, MetaConnectComplete, ResyncResult, SocialAccount } from "@/lib/social/types";
 import { accountApi } from "@/services/social-api";
 
 /** The Accounts changes as Server Actions: one call to GeekAPI as the signed-in person, and what it said. */
@@ -26,6 +26,17 @@ export async function saveAccountSettingsAction(
 export async function resyncAccountAction(accountId: string): Promise<ActionResult<ResyncResult>> {
   await verifySession();
   return run(() => accounts.resync(accountId));
+}
+
+/**
+ * Finishes connecting a Facebook Page: Meta's single-use code goes to GeekAPI once, with the same redirect address the
+ * start sent. The address is worked out here, so the browser cannot name a different one.
+ */
+export async function completeMetaConnectAction(code: string, state: string): Promise<ActionResult<MetaConnectComplete>> {
+  await verifySession();
+  const result = await run(() => accounts.completeMetaConnect(code, state, metaRedirectUri()));
+  if (result.ok) revalidatePath("/accounts");
+  return result;
 }
 
 /**

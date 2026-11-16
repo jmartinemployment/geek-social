@@ -30,7 +30,7 @@ export type HubState =
   | { kind: "reconnecting"; reason: string | null }
   | { kind: "off"; reason: string };
 
-type HubEventName = HubMessageName | "resync";
+export type HubEventName = HubMessageName | "resync";
 type Listener = (body: unknown) => void;
 
 interface HubContextValue {
