@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authFailurePage } from "@/lib/auth-failure";
 import { oauthConfig } from "@/lib/env";
 import { endSessionUrl } from "@/lib/oauth-client";
+import { isSameOriginWrite } from "@/lib/same-origin";
 import { clearSession, readSession } from "@/lib/session";
 
 /**
@@ -10,8 +11,7 @@ import { clearSession, readSession } from "@/lib/session";
  * only, and only from this app's own origin, so another site cannot sign a person out with a link.
  */
 export async function POST(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (origin !== oauthConfig.appOrigin) {
+  if (!isSameOriginWrite(request, oauthConfig.appOrigin)) {
     return NextResponse.json({ error: "Sign-out must be requested from this app." }, { status: 403 });
   }
 

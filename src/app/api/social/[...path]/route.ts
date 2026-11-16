@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { fetchWithAuth, SessionEndedError } from "@/lib/api-client";
 import { apiConfig } from "@/lib/config";
+import { oauthConfig } from "@/lib/env";
 import { errorText } from "@/lib/errors";
+import { isSameOriginWrite } from "@/lib/same-origin";
 import { SessionRenewalError } from "@/lib/session-renewal";
 import { socialTargetPath } from "@/lib/social/proxy-path";
 
@@ -17,6 +19,12 @@ import { socialTargetPath } from "@/lib/social/proxy-path";
 export const maxDuration = 300;
 
 async function forward(request: NextRequest, path: string[]): Promise<Response> {
+  if (!isSameOriginWrite(request, oauthConfig.appOrigin)) {
+    return Response.json(
+      { error: "This request did not come from this app's own pages, so it was not sent to GeekAPI." },
+      { status: 403 },
+    );
+  }
   let targetPath: string;
   try {
     targetPath = socialTargetPath(path);
