@@ -1,4 +1,4 @@
-import type { ReplyDraft, SocialAccount, StoredPost } from "@/lib/social/types";
+import type { ReplyDraft, SocialAccount, SocialCommentView, StoredPost } from "@/lib/social/types";
 
 export function draft(overrides: Partial<ReplyDraft> = {}): ReplyDraft {
   return {
@@ -54,6 +54,24 @@ export function storedPost(overrides: Partial<StoredPost> = {}): StoredPost {
     scheduledFor: null,
     publishedAt: "2026-11-15T12:00:00Z",
     createdAt: "2026-11-15T11:59:00Z",
+    ...overrides,
+  };
+}
+
+export function commentView(overrides: Partial<SocialCommentView> = {}): SocialCommentView {
+  return {
+    id: "c1",
+    accountId: "a1",
+    platform: "facebook",
+    kind: "comment",
+    platformPostId: "p1",
+    platformCommentId: "fb-c1",
+    authorDisplayName: "Sam",
+    text: "Is this open on Sundays?",
+    occurredAt: "2026-11-16T11:59:00Z",
+    triageOutcome: "failed",
+    triageFailureCode: "triage_failed",
+    triagedAt: "2026-11-16T12:00:00Z",
     ...overrides,
   };
 }

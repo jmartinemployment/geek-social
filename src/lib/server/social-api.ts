@@ -1,4 +1,5 @@
 import { fetchWithAuth } from "@/lib/api-client";
+import type { SocialAccount } from "@/lib/social/types";
 import { SocialApiError, readAnswer, type Transport } from "@/services/social-api";
 
 /**
@@ -22,3 +23,6 @@ export const serverTransport: Transport = async (method, path, payload) => {
   }
   return readAnswer(response);
 };
+
+/** The signed-in person's connected accounts, read on the server for a page's filter and its card labels. */
+export const readAccounts = () => serverTransport<SocialAccount[]>("GET", "/accounts");

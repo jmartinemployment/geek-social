@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Badge, ErrorNote, Panel, primaryButton } from "@/components/ui";
-import { metaRedirectUri } from "@/lib/social/connect";
 import type { MetaConnectComplete } from "@/lib/social/types";
 import { accountStatusWords, platformWords } from "@/lib/social/words";
 import { completeMetaConnect, errorText } from "@/services/social-api";
@@ -14,7 +13,7 @@ import { completeMetaConnect, errorText } from "@/services/social-api";
  * GeekAPI's complete route once. The code is single-use, so a second call would fail and hide a
  * connect that worked.
  */
-export function MetaCallbackClient() {
+export function MetaCallbackClient({ redirectUri }: { redirectUri: string }) {
   const params = useSearchParams();
   const [result, setResult] = useState<MetaConnectComplete | null>(null);
   const [completeError, setCompleteError] = useState<string | null>(null);
@@ -43,12 +42,12 @@ export function MetaCallbackClient() {
 
     void (async () => {
       try {
-        setResult(await completeMetaConnect(code, state, metaRedirectUri()));
+        setResult(await completeMetaConnect(code, state, redirectUri));
       } catch (err) {
         setCompleteError(errorText(err));
       }
     })();
-  }, [paramError, code, state]);
+  }, [paramError, code, state, redirectUri]);
 
   const error = paramError ?? (completeError ? `The connect was not completed: ${completeError}` : null);
 

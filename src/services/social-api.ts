@@ -165,21 +165,21 @@ export const getStatus = () => request<SocialStatus>("/status");
 
 // Accounts
 
-export const listAccounts = () => request<SocialAccount[]>("/accounts");
+/** The account calls over one transport, so the browser and the server make them the same way. */
+export function accountApi(call: Transport) {
+  return {
+    list: () => call<SocialAccount[]>("GET", "/accounts"),
+    saveSettings: (accountId: string, settings: AccountSettings) =>
+      call<SocialAccount>("PUT", `/accounts/${id(accountId)}/settings`, settings),
+    resync: (accountId: string) => call<ResyncResult>("POST", `/accounts/${id(accountId)}/resync`, {}),
+    // Connecting a Facebook Page
+    startMetaConnect: (redirectUri: string) => call<MetaConnectStart>("POST", "/connect/meta/start", { redirectUri }),
+    completeMetaConnect: (code: string, state: string, redirectUri: string) =>
+      call<MetaConnectComplete>("POST", "/connect/meta/complete", { code, state, redirectUri }),
+  };
+}
 
-export const saveAccountSettings = (accountId: string, settings: AccountSettings) =>
-  send<SocialAccount>("PUT", `/accounts/${id(accountId)}/settings`, settings);
-
-export const resyncAccount = (accountId: string) =>
-  send<ResyncResult>("POST", `/accounts/${id(accountId)}/resync`);
-
-// Connecting a Facebook Page
-
-export const startMetaConnect = (redirectUri: string) =>
-  send<MetaConnectStart>("POST", "/connect/meta/start", { redirectUri });
-
-export const completeMetaConnect = (code: string, state: string, redirectUri: string) =>
-  send<MetaConnectComplete>("POST", "/connect/meta/complete", { code, state, redirectUri });
+// The browser's own calls, through the proxy, are defined after the transport below.
 
 // Inbox
 
@@ -245,6 +245,13 @@ export function draftApi(call: Transport) {
   };
 }
 
+const browserAccounts = accountApi(browserTransport);
+export const listAccounts = browserAccounts.list;
+export const saveAccountSettings = browserAccounts.saveSettings;
+export const resyncAccount = browserAccounts.resync;
+export const startMetaConnect = browserAccounts.startMetaConnect;
+export const completeMetaConnect = browserAccounts.completeMetaConnect;
+
 const browserDrafts = draftApi(browserTransport);
 export const listDrafts = browserDrafts.list;
 export const getDraft = browserDrafts.get;
@@ -255,14 +262,20 @@ export const rejectDraft = browserDrafts.reject;
 
 // Comments
 
-export const listComments = (state: CommentState, accountId: string | null) =>
-  request<SocialCommentView[]>(`/comments${query({ state, accountId, limit: LIST_LIMIT })}`);
+/** The comment calls over one transport, so the browser and the server make them the same way. */
+export function commentApi(call: Transport) {
+  return {
+    list: (state: CommentState, accountId: string | null) =>
+      call<SocialCommentView[]>("GET", `/comments${query({ state, accountId, limit: LIST_LIMIT })}`),
+    rerun: (commentId: string) => call<RerunResult>("POST", `/comments/${id(commentId)}/rerun`, {}),
+    like: (commentId: string) => call<ReactResult>("POST", `/comments/${id(commentId)}/react`, { reactionType: "LIKE" }),
+  };
+}
 
-export const rerunComment = (commentId: string) =>
-  send<RerunResult>("POST", `/comments/${id(commentId)}/rerun`);
-
-export const likeComment = (commentId: string) =>
-  send<ReactResult>("POST", `/comments/${id(commentId)}/react`, { reactionType: "LIKE" });
+const browserComments = commentApi(browserTransport);
+export const listComments = browserComments.list;
+export const rerunComment = browserComments.rerun;
+export const likeComment = browserComments.like;
 
 // Posts
 

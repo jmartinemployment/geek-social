@@ -2,9 +2,9 @@ import { InboxList } from "@/components/social/InboxList";
 import { UrlAccountFilter } from "@/components/UrlAccountFilter";
 import { LinkTabs, Notice, PageFrame, Panel } from "@/components/ui";
 import { INBOX_TABS, newestFirst } from "@/lib/social/inbox";
-import { serverTransport } from "@/lib/server/social-api";
-import type { SocialAccount } from "@/lib/social/types";
+import { readAccounts } from "@/lib/server/social-api";
 import { LIST_LIMIT, draftApi } from "@/services/social-api";
+import { serverTransport } from "@/lib/server/social-api";
 
 /**
  * The Inbox: reply drafts by status, read on the server so the page arrives with its drafts in it. The tab and the
@@ -19,7 +19,7 @@ export default async function InboxPage({
   const params = await searchParams;
   const tab = INBOX_TABS.find((t) => t.id === params.tab) ?? INBOX_TABS[0];
 
-  const accounts = await serverTransport<SocialAccount[]>("GET", "/accounts");
+  const accounts = await readAccounts();
   const requested = params.account ?? null;
   const accountId = requested && accounts.some((a) => a.id === requested) ? requested : null;
 
