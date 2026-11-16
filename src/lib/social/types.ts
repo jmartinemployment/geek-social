@@ -13,6 +13,16 @@ export type AutoSendCategory = (typeof AUTO_SEND_CATEGORIES)[number];
 
 export type AccountStatus = "connected" | "reconnect_required";
 
+/** The signed-in person's tenant: the customer account every GeekSocial account, comment and draft belongs to. */
+export interface SocialTenant {
+  id: string;
+  ownerUserId: string;
+  name: string;
+  /** When the tenant accepted the AI terms, or null while they have not. Until then no comment reaches the AI. */
+  aiConsentAcceptedAt: string | null;
+  createdAt: string;
+}
+
 export interface SocialAccount {
   id: string;
   platform: Platform;

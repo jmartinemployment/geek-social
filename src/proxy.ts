@@ -70,6 +70,7 @@ export const config = {
     "/posts/:path*",
     "/activity/:path*",
     "/connect/:path*",
+    "/welcome/:path*",
     "/api/social/:path*",
     "/api/live-updates",
   ],
