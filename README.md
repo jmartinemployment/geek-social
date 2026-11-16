@@ -46,7 +46,7 @@ Every code and Reviewer rule is put into plain words in one place, `src/lib/soci
   `<GeekAPI>/api/social/<path>` with the signed-in person's Bearer token. Scopes asked for:
   `openid profile email roles offline_access geeksocial.manage`.
 - **Live updates:** the server holds the SignalR connection to `<GeekAPI>/hubs/social-realtime`
-  (long polling, token in the Authorization header) and forwards each message down a Server-Sent
+  (WebSockets, token in the Authorization header) and forwards each message down a Server-Sent
   Events stream at `/api/live-updates`. The browser's `EventSource` sends only its cookie. A message
   (`draftChanged`, `commentChanged`, `accountChanged`) carries ids and states; the page then reads
   the item again through REST. The stream ends on schedule about every 280 seconds so the next one

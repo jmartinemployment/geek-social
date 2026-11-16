@@ -4,8 +4,9 @@ import { errorText } from "@/lib/errors";
 
 /**
  * The server's own SignalR connection to GeekAPI's /hubs/social-realtime, opened with the signed-in
- * person's access token so the token never reaches the browser. Long polling is used: it sends the
- * token in an Authorization header, where WebSockets would put it in the URL.
+ * person's access token so the token never reaches the browser. The transport is WebSockets, as the
+ * plan and AGENTS.md require: the hub pushes, and nothing here polls. In Node the SignalR client sends
+ * the token in an Authorization header on the upgrade request, so it is not in the URL.
  */
 
 /**
@@ -73,10 +74,14 @@ export interface BridgeHandlers {
   onGiveUp: (reason: string) => void;
 }
 
-export function createHubBridge(accessToken: () => string, handlers: BridgeHandlers): HubConnection {
+export function createHubBridge(
+  accessToken: () => string,
+  handlers: BridgeHandlers,
+  hubUrl: string = apiConfig.socialHubUrl,
+): HubConnection {
   return new HubConnectionBuilder()
-    .withUrl(apiConfig.socialHubUrl, {
-      transport: HttpTransportType.LongPolling,
+    .withUrl(hubUrl, {
+      transport: HttpTransportType.WebSockets,
       accessTokenFactory: accessToken,
     })
     .withAutomaticReconnect({

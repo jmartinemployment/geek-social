@@ -4,6 +4,8 @@ import type { NextConfig } from "next";
 const NOINDEX = [{ key: "X-Robots-Tag", value: "noindex, nofollow" }];
 
 const nextConfig: NextConfig = {
+  // The live bridge's SignalR client loads `ws` with a runtime require, which a bundle would not find.
+  serverExternalPackages: ["@microsoft/signalr", "ws"],
   async headers() {
     return [{ source: "/:path*", headers: NOINDEX }];
   },
