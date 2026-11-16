@@ -10,6 +10,8 @@ import { failureText } from "@/lib/social/tenant";
 /** What a form on the welcome page shows after it ran. An error is a sentence for the person to read. */
 export interface WelcomeState {
   error: string | null;
+  /** The business name that was submitted, handed back on a failure so the form keeps what the person typed. */
+  name?: string;
 }
 
 /** redirect() ends an action by throwing; anything else that was thrown is a failure to show. */
@@ -22,7 +24,7 @@ export async function createTenantAction(_previous: WelcomeState, formData: Form
   await verifySession();
 
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: "Enter the name of your business." };
+  if (!name) return { error: "Enter the name of your business.", name };
 
   let failed: string | null = null;
   try {
@@ -38,7 +40,7 @@ export async function createTenantAction(_previous: WelcomeState, formData: Form
     failed = `GeekSocial could not sign you up. ${errorText(err)}`;
   }
 
-  if (failed) return { error: failed };
+  if (failed) return { error: failed, name };
   redirect("/welcome");
 }
 

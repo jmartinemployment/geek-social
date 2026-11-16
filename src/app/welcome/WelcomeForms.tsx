@@ -27,7 +27,8 @@ function SignUpForm({ action, suggestedName }: { action: WelcomeAction; suggeste
     <form action={formAction} className="flex max-w-md flex-col gap-4">
       <label className={labelClass}>
         Business name
-        <input name="name" required defaultValue={suggestedName} autoComplete="organization" className={inputClass} />
+        {/* React clears a form after its action runs, so what was typed comes back through the state or it would be lost. */}
+        <input name="name" required defaultValue={state.name ?? suggestedName} autoComplete="organization" className={inputClass} />
       </label>
       {state.error ? (
         <p role="alert" className="text-sm text-red-700">

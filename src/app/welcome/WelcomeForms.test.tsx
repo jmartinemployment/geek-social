@@ -59,6 +59,26 @@ test("a sign-up that fails says why, inline, and stays on the form", async () =>
   assert.ok(screen.getByRole("button", { name: "Sign up for GeekSocial" }));
 });
 
+test("a sign-up that fails keeps the name that was typed, so a retry sends it and not the suggestion", async () => {
+  const sent: string[] = [];
+  mount({
+    tenant: null,
+    suggestedName: "Ada Lovelace",
+    signUp: async (_previous, formData) => {
+      const name = String(formData.get("name"));
+      sent.push(name);
+      return { error: "GeekSocial could not sign you up. (GeekAPI answered 503.)", name };
+    },
+  });
+  fireEvent.change(screen.getByLabelText("Business name"), { target: { value: "Acme Bookkeeping" } });
+  fireEvent.click(screen.getByRole("button", { name: "Sign up for GeekSocial" }));
+  await screen.findAllByRole("alert");
+  await waitFor(() => assert.equal((screen.getByLabelText("Business name") as HTMLInputElement).value, "Acme Bookkeeping"));
+
+  fireEvent.click(screen.getByRole("button", { name: "Sign up for GeekSocial" }));
+  await waitFor(() => assert.deepEqual(sent, ["Acme Bookkeeping", "Acme Bookkeeping"]));
+});
+
 test("a tenant that has not agreed sees the terms and the agree form, and the inbox link", () => {
   mount({ tenant: tenant(null) });
   assert.ok(screen.getByRole("button", { name: "Agree" }));
