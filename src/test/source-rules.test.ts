@@ -7,7 +7,7 @@ import { test } from "node:test";
  * Standing rules for this repo's source, checked on every test run:
  * no em dash in UI text or comments, live updates only over the one stream (no polling timers, no raw
  * sockets, and a raw EventSource only in the one file that opens that stream), and nothing kept in
- * browser storage.
+ * browser storage, and no form that posts the page back (every write is a fetch, so no page reloads).
  */
 
 const root = join(process.cwd(), "src");
@@ -48,4 +48,8 @@ test("no raw WebSocket anywhere, and a raw EventSource only in the live stream c
 
 test("nothing is kept in browser storage", () => {
   assert.deepEqual(offenders(/\b(localStorage|sessionStorage|indexedDB)\b/), []);
+});
+
+test("no form posts the page back: a <form> with an action or a method reloads the page", () => {
+  assert.deepEqual(offenders(/<form\b[^>]*\b(action|method)\s*=/), []);
 });

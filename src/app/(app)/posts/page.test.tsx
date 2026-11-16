@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SocialHubProvider } from "@/components/SocialHubProvider";
+import { ToastProvider } from "@/components/Toaster";
 import { ruleWords } from "@/lib/social/words";
 import { installFakeApi, json, type FakeApi } from "@/test/fake-api";
 import { installFakeEventSource } from "@/test/fake-event-source";
@@ -19,9 +20,11 @@ afterEach(() => {
 
 function renderPosts() {
   render(
-    <SocialHubProvider>
-      <PostsPage />
-    </SocialHubProvider>,
+    <ToastProvider>
+      <SocialHubProvider>
+        <PostsPage />
+      </SocialHubProvider>
+    </ToastProvider>,
   );
 }
 

@@ -172,8 +172,25 @@ export function Badge({
   return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${toneClass}`}>{children}</span>;
 }
 
-export function Loading({ what }: { what: string }) {
-  return <p className="text-sm text-muted">Loading {what}…</p>;
+/** A grey block that stands where content will be. Decoration only: `Loading` says what is loading. */
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div aria-hidden="true" className={`animate-pulse rounded bg-surface-muted motion-reduce:animate-none ${className}`} />;
+}
+
+/** Card-shaped placeholders while a list loads, so the page does not jump when the data arrives. */
+export function Loading({ what, rows = 3 }: { what: string; rows?: number }) {
+  return (
+    <div role="status" aria-busy="true" className="flex flex-col gap-3">
+      <span className="sr-only">Loading {what}…</span>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="rounded-lg border border-border bg-background px-4 py-4">
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="mt-3 h-3 w-full" />
+          <Skeleton className="mt-2 h-3 w-4/5" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 const timeFormat = new Intl.DateTimeFormat("en-GB", {

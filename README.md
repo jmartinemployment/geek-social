@@ -29,8 +29,9 @@ Every code and Reviewer rule is put into plain words in one place, `src/lib/soci
   code with the client secret and the verifier, verifies the ID token against GeekOAuth's JWKS
   (signature, issuer, audience, expiry, nonce), and stores the session in an encrypted `HttpOnly`,
   `SameSite=Lax` cookie (a JWE split across `gs_session.0`, `.1`, ...). No token reaches the
-  browser's JavaScript. `/api/auth/logout` (POST, same origin only) clears the cookies and redirects
-  to GeekOAuth's `end_session_endpoint` with the ID token as the hint.
+  browser's JavaScript. `/api/auth/logout` (POST by `fetch`, same origin only) clears the cookies and
+  answers `{ redirectTo }`, GeekOAuth's `end_session_endpoint` with the ID token as the hint, which the
+  browser then navigates to. Sign out is never a form post, so it does not reload the page.
 - **Sign-up:** never handled here. `/api/auth/register` redirects to GeekOAuth's `/Account/Register`
   with the whole `/connect/authorize` request as `returnUrl`. GeekOAuth requires a confirmed email
   before sign-in, so the person registers, confirms, signs in once at GeekOAuth, and OpenIddict then
@@ -54,6 +55,20 @@ Every code and Reviewer rule is put into plain words in one place, `src/lib/soci
   connect each page reads again what it shows. A refusal that retrying cannot fix (401, 403) stops
   the stream with its reason. Nothing polls on a timer. When the connection is down, a banner says
   so on every page.
+
+## How the screen behaves
+
+- **No page reloads for a write.** Every action (approve, edit, reject, publish, sign out) is a `fetch`
+  to a route, and a test fails the run on a `<form>` with an `action` or `method`. The only navigations
+  are the ones OAuth requires: to GeekOAuth to sign in, register or end its session, and back.
+- **Loading is skeletons** shaped like the cards they stand for, with the words for a screen reader.
+- **Toasts are non-blocking** and sit outside the page. A success goes away by itself; an error stays
+  until dismissed. Anything the person must act on is also said inline where it happened.
+- **Optimistic where it is safe, and only there.** Rejecting a draft shows it rejected at once, then is
+  confirmed, or put back to what the server holds (or, if that cannot be read, to how it was, with the
+  words "may have been rejected"). Approve, Send, Publish and the send kill switch are never
+  optimistic: they act on a platform or on whether replies go out, a lost answer leaves the outcome
+  unknown, and a screen that said "Sent" first would be saying something nobody confirmed.
 
 ## Environment variables
 

@@ -23,7 +23,7 @@ answers 401 without a session; the old `/api/auth/start` and `/api/auth/hub-toke
 The checks on that code:
 
 - `npm run typecheck`: clean. `npm run lint`: clean.
-- `npm test`: 152 of 152 pass (2026-11-16, with the component tests below). They include the real login, register, callback and logout routes and
+- `npm test`: 165 of 165 pass (2026-11-16, with the component tests below). They include the real login, register, callback and logout routes and
   `src/proxy.ts` run against a stand-in GeekOAuth (`src/test/mock-idp.ts`) that enforces the client
   secret, the PKCE verifier and single-use refresh tokens. They cover state, nonce, audience and
   signature refusals, a refused refresh token, GeekOAuth being unreachable, and two requests sharing
@@ -91,7 +91,7 @@ registered on the GeekOAuth `geek-social` client (its seed does this). The token
 
 `src/test/source-rules.test.ts` fails the test run on: an em dash anywhere in the source, a timer
 used to poll, a raw `WebSocket`, a raw `EventSource` anywhere except `src/services/live-stream.ts`,
-and anything kept in browser storage. Live updates
+anything kept in browser storage, and a `<form>` with an `action` or `method` (no page reloads). Live updates
 come over the one stream from `/api/live-updates`; after every connect and reconnect each page
 re-reads what it shows through REST.
 Do not work around these; change the design instead.

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DraftCard } from "@/components/social/DraftCard";
+import { ToastProvider } from "@/components/Toaster";
 import type { ReplyDraft } from "@/lib/social/types";
 import { ruleWords } from "@/lib/social/words";
 import { installFakeApi, json, type FakeApi } from "@/test/fake-api";
@@ -20,7 +21,11 @@ afterEach(() => {
 });
 
 function show(current: ReplyDraft) {
-  render(<DraftCard draft={current} accountLabel="Acme Page" onChanged={(next) => changed.push(next)} />);
+  render(
+    <ToastProvider>
+      <DraftCard draft={current} accountLabel="Acme Page" onChanged={(next) => changed.push(next)} />
+    </ToastProvider>,
+  );
 }
 
 const click = (name: string) => fireEvent.click(screen.getByRole("button", { name }));
@@ -201,16 +206,64 @@ test("Reject asks first, and nothing is sent until it is confirmed", async () =>
   assert.equal(api.calls.length, 0);
   click("Reject");
   click("Reject for good?");
-  await waitFor(() => assert.equal(changed.length, 1));
-  assert.deepEqual(changed[0], rejected);
+  await waitFor(() => assert.equal(changed.length, 2));
+  assert.deepEqual(changed[1], rejected, "the server's answer replaces the optimistic one");
   assert.equal(api.to("GET", "/drafts/d1").length, 0, "the returned draft is used");
+  await screen.findByText("Draft rejected.");
 });
 
-test("a failed Reject keeps the draft as it was and shows the error", async () => {
-  api = installFakeApi({ "POST /drafts/d1/reject": json({ error: "The draft changed.", code: "conflict" }, 409) });
+test("Reject shows the draft rejected at once, before the server has answered", async () => {
+  let answer!: (response: Response) => void;
+  const pending = new Promise<Response>((resolve) => (answer = resolve));
+  api = installFakeApi({ "POST /drafts/d1/reject": () => pending });
   show(draft());
   click("Reject");
   click("Reject for good?");
-  await screen.findByText(/The draft changed/);
-  assert.equal(changed.length, 0);
+  assert.equal(changed.length, 1);
+  assert.equal(changed[0].status, "rejected", "shown rejected while the request is still out");
+  answer(json(draft({ status: "rejected" })));
+  await waitFor(() => assert.equal(changed.length, 2));
+});
+
+test("a Reject the server refuses is taken back to what the server holds, with the reason", async () => {
+  const serverHolds = draft({ status: "sent" });
+  api = installFakeApi({
+    "POST /drafts/d1/reject": json({ error: "The draft changed.", code: "conflict" }, 409),
+    "GET /drafts/d1": json(serverHolds),
+  });
+  show(draft());
+  click("Reject");
+  click("Reject for good?");
+  await screen.findAllByText(/The draft changed/);
+  await waitFor(() => assert.equal(changed.length, 2));
+  assert.equal(changed[0].status, "rejected");
+  assert.deepEqual(changed[1], serverHolds, "not left showing a rejection the server did not make");
+  await screen.findByText(/Not rejected as shown/);
+});
+
+test("a Reject whose answer was lost shows what the server holds, which may be the rejection", async () => {
+  const serverHolds = draft({ status: "rejected" });
+  api = installFakeApi({
+    "POST /drafts/d1/reject": new Response("Gateway Timeout", { status: 504 }),
+    "GET /drafts/d1": json(serverHolds),
+  });
+  show(draft());
+  click("Reject");
+  click("Reject for good?");
+  await waitFor(() => assert.equal(changed.length, 2));
+  assert.deepEqual(changed[1], serverHolds);
+});
+
+test("a Reject that failed and cannot be read back is restored and says it may have happened", async () => {
+  const original = draft();
+  api = installFakeApi({
+    "POST /drafts/d1/reject": new Response("Gateway Timeout", { status: 504 }),
+    "GET /drafts/d1": new Response("Service Unavailable", { status: 503 }),
+  });
+  show(original);
+  click("Reject");
+  click("Reject for good?");
+  await screen.findByText(/Reading the draft back also failed/);
+  screen.getByText(/It may have been rejected/);
+  assert.deepEqual(changed[changed.length - 1], original, "put back to how it was, not left as rejected");
 });

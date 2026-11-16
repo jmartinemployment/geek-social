@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { SocialHubProvider } from "@/components/SocialHubProvider";
+import { ToastProvider } from "@/components/Toaster";
 import { installFakeApi, json, type FakeApi } from "@/test/fake-api";
 import { FakeEventSource, installFakeEventSource } from "@/test/fake-event-source";
 import { account, draft } from "@/test/fixtures";
@@ -19,9 +20,11 @@ afterEach(() => {
 /** The Inbox inside the real live-connection provider, whose stream the test drives. */
 function renderInbox() {
   render(
-    <SocialHubProvider>
-      <InboxPage />
-    </SocialHubProvider>,
+    <ToastProvider>
+      <SocialHubProvider>
+        <InboxPage />
+      </SocialHubProvider>
+    </ToastProvider>,
   );
   return {
     stream: FakeEventSource.instances[0],

@@ -9,6 +9,7 @@ import {
   primaryButton,
   secondaryButton,
 } from "@/components/ui";
+import { useToast } from "@/components/Toaster";
 import { mayHaveHappened } from "@/lib/social/outcome";
 import type { ReplyDraft, SendOutcome } from "@/lib/social/types";
 import {
@@ -69,6 +70,7 @@ export function DraftCard({
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<SendOutcome | null>(null);
   const [confirmReject, setConfirmReject] = useState(false);
+  const toast = useToast();
 
   const editing = editText !== null;
   const pending = draft.status === "pending";
@@ -100,6 +102,7 @@ export function DraftCard({
     }
     setEditText(null);
     onChanged(saved);
+    toast.success("Reply text saved.");
     setBusy(null);
   }
 
@@ -141,19 +144,32 @@ export function DraftCard({
     setBusy(null);
   }
 
+  /**
+   * Rejecting is a decision on this draft alone (nothing goes to the platform), so the card shows it
+   * rejected at once and the answer confirms it. If the answer is a refusal or is lost, the card is
+   * put back to what the server holds, never left showing a rejection nobody confirmed; if that read
+   * fails too, it goes back to how it was and says so.
+   */
   async function reject() {
+    const before = draft;
     setBusy("reject");
     setError(null);
-    let rejected: ReplyDraft;
-    try {
-      rejected = await rejectDraft(draft.id);
-    } catch (err) {
-      setError(errorText(err));
-      setBusy(null);
-      return;
-    }
     setConfirmReject(false);
-    onChanged(rejected);
+    onChanged({ ...draft, status: "rejected" });
+    try {
+      onChanged(await rejectDraft(draft.id));
+      toast.success("Draft rejected.");
+    } catch (err) {
+      const message = errorText(err);
+      setError(message);
+      try {
+        onChanged(await getDraft(draft.id));
+        toast.error(`Not rejected as shown: ${message}`);
+      } catch (readErr) {
+        onChanged(before);
+        setError(`${message} Reading the draft back also failed (${errorText(readErr)}), so it is shown as it was before you rejected it. It may have been rejected.`);
+      }
+    }
     setBusy(null);
   }
 

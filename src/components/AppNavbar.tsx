@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { SignOutButton } from "@/components/SignOutButton";
 import { useSocialHub, type HubState } from "@/components/SocialHubProvider";
 
 const nav: { href: string; label: string }[] = [
@@ -75,14 +76,7 @@ export function AppNavbar() {
             <span className={`h-2 w-2 rounded-full ${hub.dot}`} aria-hidden="true" />
             {hub.text}
           </span>
-          <form action="/api/auth/logout" method="post">
-            <button
-              type="submit"
-              className="rounded-md px-3 py-2 text-sm text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
-            >
-              Sign out
-            </button>
-          </form>
+          <SignOutButton className="rounded-md px-3 py-2 text-sm text-muted transition-colors hover:bg-surface-muted hover:text-foreground disabled:opacity-60" />
         </div>
 
         <button
@@ -123,11 +117,7 @@ export function AppNavbar() {
               <span className={`h-2 w-2 rounded-full ${hub.dot}`} aria-hidden="true" />
               {hub.text}
             </span>
-            <form action="/api/auth/logout" method="post">
-              <button type="submit" className="px-3 py-2 text-sm text-muted">
-                Sign out
-              </button>
-            </form>
+            <SignOutButton className="px-3 py-2 text-sm text-muted disabled:opacity-60" />
           </div>
         </nav>
       ) : null}

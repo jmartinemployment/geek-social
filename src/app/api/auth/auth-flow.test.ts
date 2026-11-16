@@ -239,8 +239,8 @@ test("logout clears the session and ends GeekOAuth's with the ID token as the hi
       headers: { origin: APP, cookie: cookieHeaderFrom(answered) },
     }),
   );
-  assert.equal(res.status, 303);
-  const location = new URL(res.headers.get("location")!);
+  assert.equal(res.status, 200, "a fetch gets the address to go to, not a redirect it would follow");
+  const location = new URL(((await res.json()) as { redirectTo: string }).redirectTo);
   assert.equal(location.origin + location.pathname, `${idp.issuer}/connect/logout`);
   assert.ok(location.searchParams.get("id_token_hint"));
   assert.equal(location.searchParams.get("post_logout_redirect_uri"), `${APP}/signed-out`);
@@ -258,6 +258,6 @@ test("logout from another origin is refused", async () => {
 test("logout with no session goes to the signed-out page", async () => {
   const { logout } = await routes();
   const res = await logout.POST(new NextRequest(`${APP}/api/auth/logout`, { method: "POST", headers: { origin: APP } }));
-  assert.equal(res.status, 303);
-  assert.equal(res.headers.get("location"), `${APP}/signed-out`);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { redirectTo: `${APP}/signed-out` });
 });
