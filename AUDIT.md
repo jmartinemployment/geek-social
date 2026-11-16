@@ -7,16 +7,33 @@ Scope: the unfinished items in `plans/geek-social-engagement-agent-2026-11-08.md
 
 | # | Finding | Status |
 |---|---|---|
-| 1 | `geek-social.vercel.app` redirect URI | Removed from this README and `.env.example`. **Still registered on the GeekOAuth client and the Meta app; only you can remove it.** |
+| 1 | `geek-social.vercel.app` redirect URI | Removed from this README and `.env.example`, and from code in GeekOAuth (client seed, CSP host list) and GeekBackend (CORS origins, API doc, handoff). **Those two repos' edits are uncommitted and not deployed; the seed only takes effect when GeekOAuth restarts. The Meta app console entry is still yours to remove.** |
 | 2 | Outage signs everyone out | Open. A fix was made and then reverted at your request, so `proxy.ts` and `auth-tokens.ts` are as they were at `0720473` |
-| 3 | Hub gives up after about 19 seconds | Fixed: it retries every 30 seconds for as long as it is down (test added) |
+| 3 | Hub gives up after about 19 seconds | Fixed: it retries for as long as GeekAPI is down, and stops with the reason and a sign-in link when the session has ended or the permission is missing (tests added) |
 | 4 | Phase 6 proof and its tests | Open |
 | 5 | Proxy leaves `/api/social/` | Fixed: `.` and `..` segments answer 400 (test added) |
-| 6 | Contract drift | Fixed except the `spam` auto-send question, which is yours to decide |
+| 6 | Contract drift | Fixed. Approve and send answers are checked and refused by name when unreadable. Spam auto-send stays available but now shows a warning when ticked; removing the option is your call |
 | 7 | Refresh-token rotation race | Open, unverified |
 | 8 | No CI, no component tests | Open |
 
-After the fixes and the revert: typecheck and lint clean, 20 of 20 tests pass.
+## Status of the code review findings (2026-11-15)
+
+| Finding | Status |
+|---|---|
+| Hub never stops, so a dead session sits on "reconnecting" | Fixed (see 3) |
+| Posts page defaulted to "All accounts", which GeekAPI refuses | Fixed: one account is always chosen; no "All accounts" |
+| `sendDraft` passed an unreadable answer on as `undefined` | Fixed; `approveDraft` too; the card re-reads the draft after an unreadable or lost answer |
+| Publish said "Not published" when the post might be live | Fixed: an uncertain outcome says so, reloads the list and keeps Publish off until the operator confirms they checked the Page |
+| "Not sent." shown for `outcome_unknown` | Fixed: "Send not confirmed" in amber |
+| Live message applied to the wrong tab, or overwritten by an in-flight reload | Fixed (`useResource` reloads again after a `setData` during a load) |
+| Save and reject re-read a draft the server had just returned | Fixed: the returned draft is used |
+| Spam auto-send had no warning | Warning added |
+| HANDOFF.md stale lines, repeated error-text code | Fixed |
+| `proxy.ts` clears cookies on any non-2xx | **Left as it was**, because it is the OAuth change you had reverted (finding 2) |
+
+After all of this: typecheck and lint clean, 30 of 30 tests pass, build succeeds. The hooks and
+pages have no component tests, so the Inbox race fix and the `useResource` change are checked by
+reading, not by a test.
 
 ## Findings, most severe first
 
