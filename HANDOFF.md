@@ -9,7 +9,42 @@ The setup detail (Meta app, Railway variables, platform list) is recorded in
 outside this repo and is not repeated here, so the two cannot drift. It is three days old: re-check
 any state it describes before acting on it.
 
-## Verified on 2026-11-16
+## Where it stands at the end of 2026-11-16
+
+Every screen now renders on the server (Server Components read GeekAPI through `src/lib/server/social-api.ts`;
+changes are Server Actions that hand GeekAPI's refusals back as data). Inbox shipped in `5e2a708`.
+Comments, Accounts, Posts, Activity and the Meta callback shipped in `472c7a8` and `9cb8c38`, pushed and
+deployed to `geek-social.geekatyourspot.com` (Vercel deployment `dpl_12Qa97Z84cUjrpMBAzzEBKLnhNBp`, READY).
+Checks that passed before the push: 207 tests, typecheck, lint, build.
+
+**None of the five screens has been used against the real GeekOAuth and GeekAPI.** The tests inject fake
+actions and a fake `EventSource`; the one browser run (Inbox, `5e2a708`) was against a local stand-in for
+GeekOAuth and GeekAPI, which proves nothing about the real services. The only live check of the new build is
+that `/comments` without a session redirects to the GeekOAuth sign-in page. The browser used for that was
+not signed in, and nobody has signed in or signed up to GeekSocial yet.
+
+How to test, decided by Jeff: on the deployed site, never on localhost, and never with installed or
+throwaway infrastructure (no local Postgres, Docker or stand-in services). Sign in by hand in Chrome, then
+drive `/`, `/comments`, `/accounts`, `/posts`, `/activity` and `/connect/meta/callback`. Registration
+needs the confirmation email, so it cannot be done by an agent alone.
+
+Not verified at all:
+
+- Migration 0064 (`geek_seo`/tenant tables) applied on Railway Postgres, and the tenant isolation
+  integration tests (all 10 failed before running: the helper applies only SQL scripts and `geek_seo` comes
+  from EF migrations). Railway `get-logs` needs a permission rule from Jeff.
+- The coalescing in `useServerRefresh` (only the idle path is unit-tested).
+- The server pages themselves (unknown-account warning, list-failure panel) have no unit tests.
+- The Meta connect and callback round trip against Meta.
+
+Left in place on purpose, undecided: the `/api/social/[...path]` proxy, `proxy-path.ts` and the browser
+exports in `src/services/social-api.ts`. No screen uses them now; only the draft and comment test actions
+(`proxyDraftActions`, `proxyCommentActions`) do. Removing them shrinks what the browser can reach but means
+rewriting those tests onto a fake transport.
+
+Known and unchanged: `DraftCard` can show the same refusal twice (violations panel plus error note).
+
+## Verified on 2026-11-16 (sign-in)
 
 `main` (`github.com/jmartinemployment/geek-social`) carries the confidential Backend-for-Frontend
 sign-in, deployed to `geek-social.geekatyourspot.com` (`8cff9f7`) together with GeekOAuth `1880409`,
@@ -63,12 +98,12 @@ and streams it to the browser over Server-Sent Events) with a banner when the co
   app. It is removed from the README, `.env.example`, GeekOAuth (`9b02de5`) and GeekBackend
   (`346dfe3`), both pushed and deployed on 2026-11-16; GeekOAuth now answers 400 for it. The Meta app
   console entry still has to be removed by hand. See `AUDIT.md`.
-- **Some screens have no component tests.** Covered, in a jsdom harness (`src/test/dom.ts`) with a fake
-  API and a fake `EventSource`: `DraftCard` (save, approve, send, reject and every uncertain-outcome
-  path), the Inbox page (live messages, the tab-change race, resync), the Posts page (uncertain
-  publish, one account always), `SocialHubProvider` and `useResource`. The tests that guard a fix were
-  checked by breaking the fix and watching them fail. Not covered: the Comments, Accounts, Activity and
-  Connect pages, `AppNavbar` and the UI primitives.
+- **Tests are against injected fakes.** In a jsdom harness (`src/test/dom.ts`) each client view takes an
+  `actions` prop and a thin wrapper binds the real Server Actions (tests cannot import server-action
+  modules: env validation throws). Covered: `DraftCard`, `InboxView`, `CommentsView`, `AccountsView`,
+  `PostWriter`, `StatusView` with `LiveRefresh` and `ReloadButton`, `MetaCallbackView`, `Time`,
+  `SocialHubProvider`, `useServerRefresh` (idle path), `ActionResult`. Not covered: the server pages,
+  `AppNavbar` and the UI primitives.
 - **CI is written but unproven.** `.github/workflows/ci.yml` runs typecheck, lint, tests and the build
   on every push and pull request. Its steps were run from a clean install locally; it has not yet
   run on GitHub.
@@ -76,6 +111,8 @@ and streams it to the browser over Server-Sent Events) with a banner when the co
   screen is platform-neutral.
 
 ## Run it locally
+
+This is how the app is started, not how it is tested: Jeff tests on the deployed site only (see above).
 
 ```bash
 cp .env.example .env.local   # then set the five variables; OAUTH_REDIRECT_URI=http://localhost:3006/api/auth/callback
@@ -91,7 +128,8 @@ registered on the GeekOAuth `geek-social` client (its seed does this). The token
 
 `src/test/source-rules.test.ts` fails the test run on: an em dash anywhere in the source, a timer
 used to poll, a raw `WebSocket`, a raw `EventSource` anywhere except `src/services/live-stream.ts`,
-anything kept in browser storage, and a `<form>` with an `action` or `method` (no page reloads). Live updates
+anything kept in browser storage, and a `<form>` whose `action` or `method` is a string (a function is
+allowed: that is a Server Action, with no page reload). Live updates
 come over the one stream from `/api/live-updates`; after every connect and reconnect each page
 re-reads what it shows through REST.
 Do not work around these; change the design instead.
@@ -101,10 +139,14 @@ displayed as it came), and a refused token is never replaced with another creden
 
 ## Next steps, in order
 
-1. Confirm the external state: GeekAPI Railway variables, Meta app login configuration and webhook,
-   GeekOAuth client redirect URIs (GeekBackend handoff, "Railway variables" and "Meta app settings").
-2. Run locally, sign in, connect a Page on `/accounts`, read `/activity`.
-3. Comment on a post, watch the draft arrive over SignalR, edit and approve it. Leave auto-send off
-   until several drafts have been reviewed.
+1. Sign in by hand on `geek-social.geekatyourspot.com` (register, confirm by email, sign in), complete
+   `/welcome`, then use each screen and fix what the real services show.
+2. Confirm the external state: GeekAPI Railway variables, migration 0064 on Railway, Meta app login
+   configuration and webhook, GeekOAuth client redirect URIs (GeekBackend handoff, "Railway variables"
+   and "Meta app settings").
+3. Connect a Page on `/accounts`, read `/activity`, comment on a post, watch the draft arrive over
+   SignalR, edit and approve it. Leave auto-send off until several drafts have been reviewed.
 4. Remove `geek-social.vercel.app` from the Meta app console (`AUDIT.md` finding 1).
-5. Add tests for the Comments, Accounts, Activity and Connect pages.
+5. Decide whether to remove the unused browser proxy path (see above).
+6. Later gates: image storage (7c), connectors one platform at a time, the 30-day retention purge,
+   and the confirmed-email onboarding check, auto-send removal and 403 handling from 7b.
