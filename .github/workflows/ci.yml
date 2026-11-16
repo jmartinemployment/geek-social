@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # The build reads the five server variables at import time and stops when one is missing, so it
+      # runs here with placeholders. They only have to pass validation; nothing contacts GeekOAuth.
+      - name: Build
+        run: npm run build
+        env:
+          OAUTH_ISSUER_URL: https://auth.example.test
+          OAUTH_CLIENT_ID: geek-social
+          OAUTH_CLIENT_SECRET: ci-placeholder-client-secret-0123456789
+          OAUTH_REDIRECT_URI: https://geek-social.example.test/api/auth/callback
+          SESSION_SECRET: ci-placeholder-session-secret-0123456789abcdef
