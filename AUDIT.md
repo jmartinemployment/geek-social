@@ -8,12 +8,12 @@ Scope: the unfinished items in `plans/geek-social-engagement-agent-2026-11-08.md
 | # | Finding | Status |
 |---|---|---|
 | 1 | `geek-social.vercel.app` redirect URI | Fixed and deployed 2026-11-16: removed from this repo, GeekOAuth (`9b02de5`) and GeekBackend (`346dfe3`). An authorize probe with that redirect URI now answers 400; `geek-social.geekatyourspot.com` and `localhost:3006` still reach the login page. **The Meta app console entry is still yours to remove.** |
-| 2 | Outage signs everyone out | Fixed on `bff-auth` (not merged), by the new design rather than the reverted patch: `src/proxy.ts` ends the session only when GeekOAuth answers `invalid_grant` or `invalid_token`; anything else leaves the cookies and is reported (tests added). Still open on `main`. |
-| 3 | Hub gives up after about 19 seconds | Fixed: it retries for as long as GeekAPI is down, and stops with the reason and a sign-in link when the session has ended or the permission is missing (tests added). On `bff-auth` this runs on the server, and a first-connect 401 is read from SignalR's wrapped message (found by a live test) |
+| 2 | Outage signs everyone out | Fixed, deployed 2026-11-16, by the new design rather than the reverted patch: `src/proxy.ts` ends the session only when GeekOAuth answers `invalid_grant` or `invalid_token`; anything else leaves the cookies and is reported (tests added). |
+| 3 | Hub gives up after about 19 seconds | Fixed: it retries for as long as GeekAPI is down, and stops with the reason and a sign-in link when the session has ended or the permission is missing (tests added). Since the 2026-11-16 deploy this runs on the server, and a first-connect 401 is read from SignalR's wrapped message (found by a live test) |
 | 4 | Phase 6 proof and its tests | Open |
 | 5 | Proxy leaves `/api/social/` | Fixed: `.` and `..` segments answer 400 (test added) |
 | 6 | Contract drift | Fixed. Approve and send answers are checked and refused by name when unreadable. Spam auto-send stays available but now shows a warning when ticked; removing the option is your call |
-| 7 | Refresh-token rotation race | Reduced on `bff-auth`: requests inside one server process share one refresh (test added), and the live stream no longer rotates. Two server instances can still race, which ends the session rather than corrupting it. Whether GeekOAuth tolerates reuse is still unchecked |
+| 7 | Refresh-token rotation race | Reduced by the 2026-11-16 deploy: requests inside one server process share one refresh (test added), and the live stream no longer rotates. Two server instances can still race, which ends the session rather than corrupting it. Whether GeekOAuth tolerates reuse is still unchecked |
 | 8 | No CI, no component tests | Open |
 
 ## Status of the code review findings (2026-11-15)
