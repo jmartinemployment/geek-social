@@ -1,8 +1,29 @@
 # GeekSocial as a multi-tenant product: connectors, tenants, images
 
-Status: draft for Jeff's veto, written 2026-11-16. It changes the approved plan
+Status: approved by Jeff 2026-11-16 with the adjustments under "Approved adjustments". Gate 7a (verification) only is authorized. **Gate 7a is complete (2026-11-16): see GeekBackend `docs/PLATFORM-CAPABILITIES.md` sections 1b and 2e to 2k and `docs/platform-research-2026-11-16/`. Nothing past 7a starts until Jeff has decided the eight items in 1b.** It changes the approved plan
 (`geek-social-engagement-agent-2026-11-08.md`), which treated GeekSocial as one owner's tool. No code
 follows from this until each gate below is approved.
+
+## Approved adjustments (Jeff, 2026-11-16; these override the decisions below where they differ)
+
+1. **Full platform scope, no exclusions:** Facebook, Instagram, LinkedIn, Google Business Profile, X,
+   YouTube, TikTok and Pinterest. A platform that cannot do something (read comments, receive pushes) is
+   marked BLOCKED for that action in the matrix, not dropped. `ISocialPublisher` (every platform) stays
+   separate from `ISocialEngagementReader` (only the platforms that have comments or reviews to read).
+2. **Everything real-time goes through one tenant-scoped SignalR hub in GeekAPI:** incoming webhook items,
+   draft completions, and publish and reply statuses. No client polling, no post-backs. When a customer
+   opens the screen and the hub connection is established, GeekAPI runs one on-demand sync for each
+   connected platform that has no push (for example X, TikTok, Pinterest) and streams drafts to the screen
+   as they finish. That sync is triggered by the person's connection, never by a timer.
+3. **`tenants` table:** `id`, `owner_user_id`, `name`, `ai_consent_accepted_at`, `created_at`. `tenant_id`
+   is the foreign key on every social table, mapped 1:1 to the owner on sign-up for now. This replaces
+   decision 2 below (tenant is not the `OwnerId` itself).
+4. **Gate 7b is an onboarding gate:** a tenant must have confirmed an email and a phone number and accepted
+   the AI terms before connecting an account or generating a draft. Phone confirmation depends on the
+   GeekOAuth two-factor and phone work, which another session owns.
+5. **Gate 7a checklist:** extend `PLATFORM-CAPABILITIES.md` for Google Business Profile (with Google Cloud
+   Pub/Sub push for reviews), X, YouTube, TikTok and Pinterest. For every platform: push webhook or
+   on-demand sync only, binary upload or signed-URL media, and the image format rules.
 
 ## What changed
 
@@ -63,21 +84,25 @@ here**. GeekSocial writes the post and its image prompt, stores the image, and p
 | Facebook | Built for one owner | Make it tenant-aware |
 | Instagram | Declared, no connector | Settle I1, I3, I4 from Meta's docs |
 | LinkedIn organisation, member | Declared, no connector | LinkedIn app and Community Management approval (yours to request); member stays publish-only |
-| Google Business Profile | Not in the plan | Phase 0 verification: API access request, review and reply endpoints, whether new reviews can arrive without polling |
-| X | Not in the plan | Phase 0 verification: which paid tier can read mentions at all, its cost, and whether mentions can be received without polling |
+| Google Business Profile | In scope | Gate 7a: API access request, review and reply endpoints, Pub/Sub push for reviews |
+| X | In scope | Gate 7a: which tier can read mentions, its cost, and whether mentions arrive without polling |
+| YouTube | In scope | Gate 7a: what can be published and read by API, push for comments, quota and audit |
+| TikTok | In scope | Gate 7a: Content Posting API audit, whether any comment API exists for third parties |
+| Pinterest | In scope | Gate 7a: Trial versus Standard access, whether any comment API exists |
 
-I have not researched Google or X. Nothing about their endpoints, limits or prices in the pasted spec is
-verified, and none of it should be coded from memory.
+Google, X, YouTube, TikTok and Pinterest are researched in Gate 7a and written into
+`PLATFORM-CAPABILITIES.md`; nothing about them is coded from memory.
 
 ## Order, each ending at a gate for Jeff
 
-- **7a. Verification.** Extend `PLATFORM-CAPABILITIES.md` for Google and X and for multi-tenant access
-  on every platform; settle I1, I3, I4; settle image formats and signed addresses. No code.
-- **7b. Tenants.** `tenant_id` on the social tables, a migration that gives existing rows to the current
+- **7a. Verification.** Extend `PLATFORM-CAPABILITIES.md` for the five new platforms and for multi-tenant
+  access on every platform; settle I1, I3, I4; settle image formats and signed addresses. No code.
+- **7b. Tenants and the onboarding gate.** A `tenants` table (see adjustment 3); `tenant_id` on the social tables, a migration that gives existing rows to the current
   owner, filters in `SocialRepository` and every controller, tests that one tenant cannot read or change
   another's account, draft, post or image. Then the screen shows only the signed-in tenant's accounts.
 - **7c. Images.** Storage, the image prompt on a post, and the Posts page.
-- **7d onward.** One platform per step, in this order: Instagram, LinkedIn, Google Business Profile, X.
+- **7d onward.** One platform per step. The order is set after Gate 7a shows which platforms can receive
+  pushes and which are open to a SaaS at all.
   Each connector is proven against a real test account before the next starts, and none is reported as
   working on the strength of tests against a stand-in.
 
