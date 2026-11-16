@@ -1,149 +1,63 @@
-"use client";
+import { InboxList } from "@/components/social/InboxList";
+import { UrlAccountFilter } from "@/components/UrlAccountFilter";
+import { LinkTabs, Notice, PageFrame, Panel } from "@/components/ui";
+import { INBOX_TABS, newestFirst } from "@/lib/social/inbox";
+import { serverTransport } from "@/lib/server/social-api";
+import type { SocialAccount } from "@/lib/social/types";
+import { LIST_LIMIT, draftApi } from "@/services/social-api";
 
-import { useEffect, useRef, useState } from "react";
-import { AccountFilter } from "@/components/AccountFilter";
-import { useHubEvent } from "@/components/SocialHubProvider";
-import { DraftCard } from "@/components/social/DraftCard";
-import { ErrorNote, Loading, Notice, PageFrame, Panel, Tabs, quietButton } from "@/components/ui";
-import { accountName, useAccounts } from "@/lib/hooks/use-accounts";
-import { useResource } from "@/lib/hooks/use-resource";
-import { INBOX_TABS, inboxTab, newestFirst, placeDraft, type InboxTabId } from "@/lib/social/inbox";
-import type { DraftChangedMessage, ReplyDraft } from "@/lib/social/types";
-import { LIST_LIMIT, errorText, getDraft, listDrafts } from "@/services/social-api";
+/**
+ * The Inbox: reply drafts by status, read on the server so the page arrives with its drafts in it. The tab and the
+ * account filter are in the address (`?tab=`, `?account=`), the one place the page's state lives. Approve, edit, send
+ * and reject are Server Actions run from the cards. A read that fails throws, and the error page says what failed.
+ */
+export default async function InboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; account?: string }>;
+}) {
+  const params = await searchParams;
+  const tab = INBOX_TABS.find((t) => t.id === params.tab) ?? INBOX_TABS[0];
 
-interface InboxList {
-  drafts: ReplyDraft[];
-  /** A status read came back full, so older drafts may exist beyond what is shown. */
-  truncated: boolean;
-}
+  const accounts = await serverTransport<SocialAccount[]>("GET", "/accounts");
+  const requested = params.account ?? null;
+  const accountId = requested && accounts.some((a) => a.id === requested) ? requested : null;
 
-/** The Inbox: reply drafts by status, with approve, edit, send and reject. */
-export default function InboxPage() {
-  const [tabId, setTabId] = useState<InboxTabId>("pending");
-  const [accountId, setAccountId] = useState<string | null>(null);
-  // Drafts the operator acted on in this tab. They stay in view after they leave the tab's status,
-  // so the outcome of the action is not taken away by the live message it causes.
-  const [kept, setKept] = useState<ReadonlySet<string>>(new Set());
-  const [liveErrors, setLiveErrors] = useState<string[]>([]);
+  const api = draftApi(serverTransport);
+  const reads = await Promise.all(tab.statuses.map((status) => api.list(status, accountId)));
+  const drafts = reads.flat().filter(tab.matches).sort(newestFirst);
+  const truncated = reads.some((read) => read.length >= LIST_LIMIT);
 
-  const accounts = useAccounts();
-  const tab = inboxTab(tabId);
-
-  // What the screen shows now, for a live message that finishes reading its draft after the operator
-  // has moved on. The handler's own closure is from the moment the message arrived.
-  const view = useRef({ tabId, accountId, tab, kept });
-  useEffect(() => {
-    view.current = { tabId, accountId, tab, kept };
-  });
-
-  const list = useResource<InboxList>(`${tabId}|${accountId ?? ""}`, async () => {
-    const reads = await Promise.all(tab.statuses.map((status) => listDrafts(status, accountId)));
-    return {
-      drafts: reads.flat().filter(tab.matches).sort(newestFirst),
-      truncated: reads.some((r) => r.length >= LIST_LIMIT),
-    };
-  });
-
-  useHubEvent("draftChanged", (body) => {
-    const message = body as DraftChangedMessage;
-    if (accountId && message.accountId !== accountId) return;
-    const startedOn = { tabId, accountId };
-    void (async () => {
-      let draft: ReplyDraft;
-      try {
-        draft = await getDraft(message.draftId);
-      } catch (err) {
-        setLiveErrors((prev) => [
-          ...prev,
-          `A draft changed (${message.draftId}, now ${message.status}) and reading it failed: ${errorText(err)}`,
-        ]);
-        return;
-      }
-      const now = view.current;
-      // The operator moved to another tab or account while the draft was being read. That view read
-      // its own list after this change, and this draft was placed against the old tab's rules, so it
-      // is not applied to the new list.
-      if (now.tabId !== startedOn.tabId || now.accountId !== startedOn.accountId) return;
-      list.setData((current) => ({ ...current, drafts: placeDraft(current.drafts, draft, now.tab, now.kept) }));
-    })();
-  });
-  useHubEvent("resync", () => list.reload());
-
-  function selectTab(id: InboxTabId) {
-    setTabId(id);
-    setKept(new Set());
-  }
-
-  function handleChanged(draft: ReplyDraft) {
-    const nextKept = new Set(kept).add(draft.id);
-    setKept(nextKept);
-    list.setData((current) => ({ ...current, drafts: placeDraft(current.drafts, draft, tab, nextKept) }));
-  }
+  const hrefFor = (id: string) => {
+    const next = new URLSearchParams();
+    next.set("tab", id);
+    if (accountId) next.set("account", accountId);
+    return `/?${next.toString()}`;
+  };
 
   return (
     <PageFrame
       title="Inbox"
       intro="Replies Claude drafted for comments on your connected Pages. Nothing is sent until you approve it, unless the account auto-sends that category."
     >
-      <Panel
-        aside={
-          <AccountFilter
-            accounts={accounts.data}
-            accountsError={accounts.error}
-            value={accountId}
-            onChange={(id) => {
-              setAccountId(id);
-              setKept(new Set());
-            }}
-          />
-        }
-      >
-        <Tabs label="Draft status" tabs={INBOX_TABS} selected={tabId} onSelect={selectTab} />
-
-        <div className="mt-4 flex flex-col gap-3">
-          {liveErrors.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {liveErrors.map((message, i) => (
-                <ErrorNote key={i} message={message} />
-              ))}
-              <button type="button" onClick={() => setLiveErrors([])} className={`${quietButton} self-start`}>
-                Clear these errors
-              </button>
-            </div>
-          ) : null}
-
-          {list.loading ? <Loading what="drafts" /> : null}
-          {list.error ? <ErrorNote message={`Drafts did not load: ${list.error}`} onRetry={list.reload} /> : null}
-
-          {list.data ? (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
-                <span>
-                  {list.data.drafts.length} {list.data.drafts.length === 1 ? "draft" : "drafts"}
-                  {list.refreshing ? " · refreshing…" : ""}
-                </span>
-                <button type="button" onClick={list.reload} className={quietButton}>
-                  Reload
-                </button>
-              </div>
-              {list.data.truncated ? (
-                <Notice tone="warn">
-                  GeekAPI returns at most {LIST_LIMIT} drafts per status, and it returned that many. Older
-                  drafts with this status may exist and are not shown here.
-                </Notice>
-              ) : null}
-              {list.data.drafts.length === 0 ? <p className="text-sm text-muted">{tab.empty}</p> : null}
-              {list.data.drafts.map((draft) => (
-                <DraftCard
-                  key={draft.id}
-                  draft={draft}
-                  accountLabel={accountName(accounts.data, draft.accountId)}
-                  onChanged={handleChanged}
-                />
-              ))}
-            </>
-          ) : null}
-        </div>
+      <Panel aside={<UrlAccountFilter accounts={accounts} value={accountId} />}>
+        {requested && !accountId ? (
+          <div className="mb-4">
+            <Notice tone="warn">The account in the address is not one of yours, so every account is shown.</Notice>
+          </div>
+        ) : null}
+        <LinkTabs
+          label="Draft status"
+          tabs={INBOX_TABS.map((t) => ({ id: t.id, label: t.label, href: hrefFor(t.id) }))}
+          selected={tab.id}
+        />
+        <InboxList
+          key={`${tab.id}|${accountId ?? ""}`}
+          drafts={drafts}
+          accounts={accounts}
+          emptyText={tab.empty}
+          truncated={truncated}
+        />
       </Panel>
     </PageFrame>
   );

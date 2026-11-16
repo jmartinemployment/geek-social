@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DraftCard } from "@/components/social/DraftCard";
+import { proxyDraftActions } from "@/services/draft-actions";
 import { ToastProvider } from "@/components/Toaster";
 import type { ReplyDraft } from "@/lib/social/types";
 import { ruleWords } from "@/lib/social/words";
@@ -23,7 +24,7 @@ afterEach(() => {
 function show(current: ReplyDraft) {
   render(
     <ToastProvider>
-      <DraftCard draft={current} accountLabel="Acme Page" onChanged={(next) => changed.push(next)} />
+      <DraftCard draft={current} accountLabel="Acme Page" onChanged={(next) => changed.push(next)} actions={proxyDraftActions} />
     </ToastProvider>,
   );
 }

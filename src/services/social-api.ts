@@ -108,6 +108,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new SocialApiError(`Could not reach this app's server: ${detail}`, 0, null, []);
   }
 
+  return readAnswer<T>(response);
+}
+
+/**
+ * Reads GeekAPI's answer into the value it promises, or into the error that names what went wrong. Shared by the
+ * browser's calls through the proxy and the server's direct calls, so both refuse the same answers the same way.
+ */
+export async function readAnswer<T>(response: Response): Promise<T> {
   const body = await response.text();
   if (!response.ok) {
     throw refusalFrom(response.status, response.statusText, body);
@@ -175,14 +183,11 @@ export const completeMetaConnect = (code: string, state: string, redirectUri: st
 
 // Inbox
 
-export const listDrafts = (status: DraftStatus, accountId: string | null) =>
-  request<ReplyDraft[]>(`/drafts${query({ status, accountId, limit: LIST_LIMIT })}`);
+/** How a call reaches GeekAPI: from the browser through the proxy, or from the server directly. Paths follow /api/social. */
+export type Transport = <T>(method: "GET" | "POST" | "PUT", path: string, payload?: unknown) => Promise<T>;
 
-export const getDraft = (draftId: string) => request<ReplyDraft>(`/drafts/${id(draftId)}`);
-
-/** Saves new text on a pending draft. The Reviewer checks it first; a refusal is 422 review_refused. */
-export const saveDraftText = (draftId: string, draftText: string) =>
-  send<ReplyDraft>("PUT", `/drafts/${id(draftId)}`, { draftText });
+const browserTransport: Transport = (method, path, payload) =>
+  method === "GET" ? request(path) : send(method, path, payload);
 
 /**
  * A draft action whose answer does not carry what the screen acts on is refused by name. The action
@@ -210,24 +215,43 @@ function isDraft(value: unknown): value is ReplyDraft {
   return typeof fields.id === "string" && typeof fields.status === "string";
 }
 
-export async function approveDraft(draftId: string): Promise<ApproveResult> {
-  const route = "the approve";
-  const answer = await send<Partial<ApproveResult> | null>("POST", `/drafts/${id(draftId)}/approve`);
-  if (!isSendOutcome(answer?.send)) throw unreadableAnswer(route, "a send outcome");
-  if (!isDraft(answer?.draft)) throw unreadableAnswer(route, "the draft");
-  return { draft: answer.draft, send: answer.send };
+/** The reply-draft calls over one transport, so the browser and the server make them, and refuse bad answers, the same way. */
+export function draftApi(call: Transport) {
+  return {
+    list: (status: DraftStatus, accountId: string | null) =>
+      call<ReplyDraft[]>("GET", `/drafts${query({ status, accountId, limit: LIST_LIMIT })}`),
+
+    get: (draftId: string) => call<ReplyDraft>("GET", `/drafts/${id(draftId)}`),
+
+    /** Saves new text on a pending draft. The Reviewer checks it first; a refusal is 422 review_refused. */
+    saveText: (draftId: string, draftText: string) => call<ReplyDraft>("PUT", `/drafts/${id(draftId)}`, { draftText }),
+
+    approve: async (draftId: string): Promise<ApproveResult> => {
+      const answer = await call<Partial<ApproveResult> | null>("POST", `/drafts/${id(draftId)}/approve`);
+      if (!isSendOutcome(answer?.send)) throw unreadableAnswer("the approve", "a send outcome");
+      if (!isDraft(answer?.draft)) throw unreadableAnswer("the approve", "the draft");
+      return { draft: answer.draft, send: answer.send };
+    },
+
+    /** Sends an approved draft a limit held back. GeekAPI answers `{ draft, send }`, as approve does. */
+    send: async (draftId: string): Promise<SendOutcome> => {
+      const answer = await call<Partial<ApproveResult> | null>("POST", `/drafts/${id(draftId)}/send`);
+      if (!isSendOutcome(answer?.send)) throw unreadableAnswer("the send", "a send outcome");
+      return answer.send;
+    },
+
+    /** Rejects a pending or approved draft. */
+    reject: (draftId: string) => call<ReplyDraft>("POST", `/drafts/${id(draftId)}/reject`),
+  };
 }
 
-/** Sends an approved draft a limit held back. GeekAPI answers `{ draft, send }`, as approve does. */
-export async function sendDraft(draftId: string): Promise<SendOutcome> {
-  const answer = await send<Partial<ApproveResult> | null>("POST", `/drafts/${id(draftId)}/send`);
-  if (!isSendOutcome(answer?.send)) throw unreadableAnswer("the send", "a send outcome");
-  return answer.send;
-}
-
-/** Rejects a pending or approved draft. */
-export const rejectDraft = (draftId: string) =>
-  send<ReplyDraft>("POST", `/drafts/${id(draftId)}/reject`);
+const browserDrafts = draftApi(browserTransport);
+export const listDrafts = browserDrafts.list;
+export const getDraft = browserDrafts.get;
+export const saveDraftText = browserDrafts.saveText;
+export const approveDraft = browserDrafts.approve;
+export const sendDraft = browserDrafts.send;
+export const rejectDraft = browserDrafts.reject;
 
 // Comments
 

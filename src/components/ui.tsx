@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 /**
  * The building blocks every page shares, styled as Content Creator styles its own: the ink page
  * with a masthead, white `bg-surface` panels, underlined tabs, and the accent kept for the one
@@ -105,6 +107,45 @@ export function Tabs<T extends string>({
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Tabs that are addresses. Each is a link to its own URL, so the selected tab is in the address bar, can be shared
+ * and reloaded, and the server renders the page for it. The server works the addresses out and passes them in.
+ */
+export function LinkTabs({
+  label,
+  tabs,
+  selected,
+}: {
+  label: string;
+  tabs: readonly { id: string; label: string; href: string }[];
+  selected: string;
+}) {
+  return (
+    <nav className="flex flex-wrap items-end gap-6 border-b border-border" aria-label={label}>
+      {tabs.map((tab) => {
+        const isSelected = tab.id === selected;
+        return (
+          <Link
+            key={tab.id}
+            href={tab.href}
+            replace
+            scroll={false}
+            aria-current={isSelected ? "page" : undefined}
+            className={
+              "-mb-px border-b-2 px-1 pb-2.5 pt-1 text-sm transition-colors " +
+              (isSelected
+                ? "border-brand font-semibold text-foreground"
+                : "border-transparent font-medium text-muted hover:border-border hover:text-foreground")
+            }
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 

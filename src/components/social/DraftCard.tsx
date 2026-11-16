@@ -19,15 +19,8 @@ import {
   platformWords,
   ruleWords,
 } from "@/lib/social/words";
-import {
-  SocialApiError,
-  approveDraft,
-  errorText,
-  getDraft,
-  rejectDraft,
-  saveDraftText,
-  sendDraft,
-} from "@/services/social-api";
+import type { DraftActions } from "@/services/draft-actions";
+import { SocialApiError, errorText } from "@/services/social-api";
 
 const STATUS_TONE: Record<string, "neutral" | "good" | "warn" | "bad" | "brand"> = {
   pending: "brand",
@@ -59,10 +52,13 @@ export function DraftCard({
   draft,
   accountLabel,
   onChanged,
+  actions,
 }: {
   draft: ReplyDraft;
   accountLabel: string;
   onChanged: (draft: ReplyDraft) => void;
+  /** How the card changes a draft. The app passes Server Actions; a test passes stand-ins. */
+  actions: DraftActions;
 }) {
   const [editText, setEditText] = useState<string | null>(null);
   const [violations, setViolations] = useState<string[]>([]);
@@ -78,7 +74,7 @@ export function DraftCard({
 
   async function readBack(done: string) {
     try {
-      onChanged(await getDraft(draft.id));
+      onChanged(await actions.read(draft.id));
     } catch (err) {
       setError(`${done}, but reading the draft back failed: ${errorText(err)}`);
     }
@@ -91,7 +87,7 @@ export function DraftCard({
     setViolations([]);
     let saved: ReplyDraft;
     try {
-      saved = await saveDraftText(draft.id, editText);
+      saved = await actions.saveText(draft.id, editText);
     } catch (err) {
       if (err instanceof SocialApiError && err.code === "review_refused") {
         setViolations(err.violations);
@@ -111,7 +107,7 @@ export function DraftCard({
     setError(null);
     setOutcome(null);
     try {
-      const result = await approveDraft(draft.id);
+      const result = await actions.approve(draft.id);
       setOutcome(result.send);
       onChanged(result.draft);
     } catch (err) {
@@ -132,7 +128,7 @@ export function DraftCard({
     setOutcome(null);
     let result: SendOutcome;
     try {
-      result = await sendDraft(draft.id);
+      result = await actions.send(draft.id);
     } catch (err) {
       setError(errorText(err));
       if (mayHaveHappened(err)) await readBack(errorText(err));
@@ -157,13 +153,13 @@ export function DraftCard({
     setConfirmReject(false);
     onChanged({ ...draft, status: "rejected" });
     try {
-      onChanged(await rejectDraft(draft.id));
+      onChanged(await actions.reject(draft.id));
       toast.success("Draft rejected.");
     } catch (err) {
       const message = errorText(err);
       setError(message);
       try {
-        onChanged(await getDraft(draft.id));
+        onChanged(await actions.read(draft.id));
         toast.error(`Not rejected as shown: ${message}`);
       } catch (readErr) {
         onChanged(before);
