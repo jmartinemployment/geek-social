@@ -7,7 +7,7 @@ follows from this until each gate below is approved.
 ## Approved adjustments (Jeff, 2026-11-16; these override the decisions below where they differ)
 
 1. **Full platform scope, no exclusions:** Facebook, Instagram, LinkedIn, Google Business Profile, X,
-   TikTok and Pinterest (YouTube was dropped 2026-11-16). A platform that cannot do something (read comments, receive pushes) is
+   and TikTok (YouTube and Pinterest were dropped 2026-11-16). A platform that cannot do something (read comments, receive pushes) is
    marked BLOCKED for that action in the matrix, not dropped. `ISocialPublisher` (every platform) stays
    separate from `ISocialEngagementReader` (only the platforms that have comments or reviews to read).
 2. **Everything real-time goes through one tenant-scoped SignalR hub in GeekAPI:** incoming webhook items,
@@ -88,7 +88,7 @@ here**. GeekSocial writes the post and its image prompt, stores the image, and p
 | X | In scope | Gate 7a: which tier can read mentions, its cost, and whether mentions arrive without polling |
 | YouTube | NOT SUPPORTED (Jeff, 2026-11-16); research kept | none |
 | TikTok | In scope | Gate 7a: Content Posting API audit, whether any comment API exists for third parties |
-| Pinterest | In scope | Gate 7a: Trial versus Standard access, whether any comment API exists |
+| Pinterest | NOT SUPPORTED (Jeff, 2026-11-16): publish-only; research kept | none |
 
 Google, X, YouTube, TikTok and Pinterest are researched in Gate 7a and written into
 `PLATFORM-CAPABILITIES.md`; nothing about them is coded from memory.
