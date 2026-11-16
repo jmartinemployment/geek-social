@@ -1,6 +1,6 @@
 # GeekSocial as a multi-tenant product: connectors, tenants, images
 
-Status: approved by Jeff 2026-11-16 with the adjustments under "Approved adjustments". Gate 7a (verification) only is authorized. **Gate 7a is complete (2026-11-16): see GeekBackend `docs/PLATFORM-CAPABILITIES.md` sections 1b and 2e to 2k and `docs/platform-research-2026-11-16/`. Nothing past 7a starts until Jeff has decided the eight items in 1b.** It changes the approved plan
+Status: approved by Jeff 2026-11-16 with the adjustments under "Approved adjustments". Gate 7a (verification) only is authorized. **Gate 7a is complete (2026-11-16): see GeekBackend `docs/PLATFORM-CAPABILITIES.md` sections 1b and 2e to 2k and `docs/platform-research-2026-11-16/`. Nothing past 7a starts until Jeff has decided the eight items in 1b. Decided so far: item 1, the tenant's standing opt-in is the consent mechanism and no platform is asked (Jeff, 2026-11-16).** It changes the approved plan
 (`geek-social-engagement-agent-2026-11-08.md`), which treated GeekSocial as one owner's tool. No code
 follows from this until each gate below is approved.
 
