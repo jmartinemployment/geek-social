@@ -23,7 +23,7 @@ answers 401 without a session; the old `/api/auth/start` and `/api/auth/hub-toke
 The checks on that code:
 
 - `npm run typecheck`: clean. `npm run lint`: clean.
-- `npm test`: 80 of 80 pass. They include the real login, register, callback and logout routes and
+- `npm test`: 152 of 152 pass (2026-11-16, with the component tests below). They include the real login, register, callback and logout routes and
   `src/proxy.ts` run against a stand-in GeekOAuth (`src/test/mock-idp.ts`) that enforces the client
   secret, the PKCE verifier and single-use refresh tokens. They cover state, nonce, audience and
   signature refusals, a refused refresh token, GeekOAuth being unreachable, and two requests sharing
@@ -63,8 +63,15 @@ and streams it to the browser over Server-Sent Events) with a banner when the co
   app. It is removed from the README, `.env.example`, GeekOAuth (`9b02de5`) and GeekBackend
   (`346dfe3`), both pushed and deployed on 2026-11-16; GeekOAuth now answers 400 for it. The Meta app
   console entry still has to be removed by hand. See `AUDIT.md`.
-- **No component or page tests.** `DraftCard`, the six pages and the hooks are covered only by
-  typecheck, lint and build.
+- **Some screens have no component tests.** Covered, in a jsdom harness (`src/test/dom.ts`) with a fake
+  API and a fake `EventSource`: `DraftCard` (save, approve, send, reject and every uncertain-outcome
+  path), the Inbox page (live messages, the tab-change race, resync), the Posts page (uncertain
+  publish, one account always), `SocialHubProvider` and `useResource`. The tests that guard a fix were
+  checked by breaking the fix and watching them fail. Not covered: the Comments, Accounts, Activity and
+  Connect pages, `AppNavbar` and the UI primitives.
+- **CI is written but unproven.** `.github/workflows/ci.yml` runs typecheck, lint, tests and the build
+  on every push and pull request. Its steps were run from a clean install locally; it has not yet
+  run on GitHub.
 - **Facebook Pages only.** Other platforms are connectors in GeekAPI, not work in this repo; the
   screen is platform-neutral.
 
@@ -100,4 +107,4 @@ displayed as it came), and a refused token is never replaced with another creden
 3. Comment on a post, watch the draft arrive over SignalR, edit and approve it. Leave auto-send off
    until several drafts have been reviewed.
 4. Remove `geek-social.vercel.app` from the Meta app console (`AUDIT.md` finding 1).
-5. Add tests for the draft actions in `src/components/social/DraftCard.tsx`.
+5. Add tests for the Comments, Accounts, Activity and Connect pages.

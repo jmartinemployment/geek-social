@@ -1,4 +1,4 @@
-import type { ReplyDraft, SocialAccount } from "@/lib/social/types";
+import type { ReplyDraft, SocialAccount, StoredPost } from "@/lib/social/types";
 
 export function draft(overrides: Partial<ReplyDraft> = {}): ReplyDraft {
   return {
@@ -38,6 +38,22 @@ export function account(overrides: Partial<SocialAccount> = {}): SocialAccount {
     sendsDisabled: false,
     tokenExpiresAt: null,
     connectedAt: "2026-11-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+export function storedPost(overrides: Partial<StoredPost> = {}): StoredPost {
+  return {
+    id: "post1",
+    accountId: "a1",
+    platform: "facebook",
+    platformPostId: "fb-post-1",
+    kind: "link",
+    text: "Read our latest guide.",
+    linkUrl: "https://geekatyourspot.com/guide",
+    scheduledFor: null,
+    publishedAt: "2026-11-15T12:00:00Z",
+    createdAt: "2026-11-15T11:59:00Z",
     ...overrides,
   };
 }

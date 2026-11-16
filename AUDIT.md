@@ -14,7 +14,7 @@ Scope: the unfinished items in `plans/geek-social-engagement-agent-2026-11-08.md
 | 5 | Proxy leaves `/api/social/` | Fixed: `.` and `..` segments answer 400 (test added) |
 | 6 | Contract drift | Fixed. Approve and send answers are checked and refused by name when unreadable. Spam auto-send stays available but now shows a warning when ticked; removing the option is your call |
 | 7 | Refresh-token rotation race | Reduced by the 2026-11-16 deploy: requests inside one server process share one refresh (test added), and the live stream no longer rotates. Two server instances can still race, which ends the session rather than corrupting it. Whether GeekOAuth tolerates reuse is still unchecked |
-| 8 | No CI, no component tests | Open |
+| 8 | No CI, no component tests | Partly fixed (2026-11-16): a CI workflow is written, and the Inbox, Posts, DraftCard, hub provider and `useResource` have component tests. CI has not run on GitHub yet; the Comments, Accounts, Activity and Connect pages are untested |
 
 ## Status of the code review findings (2026-11-15)
 
@@ -31,9 +31,8 @@ Scope: the unfinished items in `plans/geek-social-engagement-agent-2026-11-08.md
 | HANDOFF.md stale lines, repeated error-text code | Fixed |
 | `proxy.ts` clears cookies on any non-2xx | **Left as it was**, because it is the OAuth change you had reverted (finding 2) |
 
-After all of this: typecheck and lint clean, 30 of 30 tests pass, build succeeds. The hooks and
-pages have no component tests, so the Inbox race fix and the `useResource` change are checked by
-reading, not by a test.
+After all of this: typecheck and lint clean, 30 of 30 tests pass, build succeeds. The Inbox race fix
+and the `useResource` change were checked by reading at the time; they now have tests (see finding 8).
 
 ## Findings, most severe first
 
@@ -120,8 +119,11 @@ Check: expire the access cookie and open `/` with DevTools open.
 
 ### 8. No automated checks outside Vercel's build (low)
 
-There is no `.github` directory, so typecheck, lint and tests do not run on push. There are no tests
-for the pages, `DraftCard`, the hub provider or the auth routes.
+As audited there was no `.github` directory, so typecheck, lint and tests did not run on push, and the
+pages, `DraftCard`, the hub provider and the auth routes had no tests. Since then: a CI workflow, tests
+for the auth routes and the proxy (against a stand-in GeekOAuth), and component tests for `DraftCard`,
+the Inbox and Posts pages, the hub provider and `useResource`. Not yet: CI running on GitHub, and the
+Comments, Accounts, Activity and Connect pages.
 
 ## Unfinished plan items
 
