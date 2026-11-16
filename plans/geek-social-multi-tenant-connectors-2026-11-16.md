@@ -1,6 +1,6 @@
 # GeekSocial as a multi-tenant product: connectors, tenants, images
 
-Status: approved by Jeff 2026-11-16 with the adjustments under "Approved adjustments". Gate 7a (verification) only is authorized. **Gate 7a is complete (2026-11-16): see GeekBackend `docs/PLATFORM-CAPABILITIES.md` sections 1b and 2e to 2k and `docs/platform-research-2026-11-16/`. Nothing past 7a starts until Jeff has decided the eight items in 1b. Decided so far: item 1, the tenant's standing opt-in is the consent mechanism and no platform is asked (Jeff, 2026-11-16).** It changes the approved plan
+Status: approved by Jeff 2026-11-16 with the adjustments under "Approved adjustments". Gate 7a (verification) only is authorized. **Gate 7a is complete (2026-11-16): see GeekBackend `docs/PLATFORM-CAPABILITIES.md` sections 1b and 2e to 2k and `docs/platform-research-2026-11-16/`. Nothing past 7a starts until Jeff has decided the eight items in 1b. Decided so far: item 1, there is no autonomous sending: nothing is posted without a person approving that reply or post, so auto-send is removed from the product and no platform consent question is asked (Jeff, 2026-11-16).** It changes the approved plan
 (`geek-social-engagement-agent-2026-11-08.md`), which treated GeekSocial as one owner's tool. No code
 follows from this until each gate below is approved.
 
@@ -107,6 +107,10 @@ Google, X, YouTube, TikTok and Pinterest are researched in Gate 7a and written i
   working on the strength of tests against a stand-in.
 
 ## Rules kept
+
+No autonomous sending (Jeff, 2026-11-16): a person approves every reply and every post. Care must be given to
+prevent AI hallucinations, spam and similar content from being posted. Removing auto-send from what is built
+(`AutoSendCategories`, the orchestrator's auto-send step, this screen's Accounts settings) is work for a later gate.
 
 Fail loud with `Result<T>` and a visible outcome, never a swallowed error. One attempt per write, and a
 write the platform did not clearly refuse is `outcome_unknown`. No stubs and no placeholder data.
