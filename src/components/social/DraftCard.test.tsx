@@ -6,6 +6,7 @@ import { DraftCard } from "@/components/social/DraftCard";
 import type { ReplyDraft } from "@/lib/social/types";
 import { ruleWords } from "@/lib/social/words";
 import { installFakeApi, json, type FakeApi } from "@/test/fake-api";
+import { draft } from "@/test/fixtures";
 
 let api: FakeApi;
 let changed: ReplyDraft[];
@@ -17,33 +18,6 @@ afterEach(() => {
   cleanup();
   api?.restore();
 });
-
-function draft(overrides: Partial<ReplyDraft> = {}): ReplyDraft {
-  return {
-    id: "d1",
-    accountId: "a1",
-    platform: "facebook",
-    category: "question",
-    draftText: "Thanks for asking. We open at nine.",
-    needsHumanReason: null,
-    reviewRefusal: null,
-    status: "pending",
-    sentPlatformCommentId: null,
-    failureCode: null,
-    createdAt: "2026-11-16T12:00:00Z",
-    decidedAt: null,
-    sendingStartedAt: null,
-    comment: {
-      eventId: "e1",
-      text: "When do you open?",
-      authorDisplayName: "Sam",
-      platformPostId: "p1",
-      platformCommentId: "c1",
-      occurredAt: "2026-11-16T11:59:00Z",
-    },
-    ...overrides,
-  };
-}
 
 function show(current: ReplyDraft) {
   render(<DraftCard draft={current} accountLabel="Acme Page" onChanged={(next) => changed.push(next)} />);
