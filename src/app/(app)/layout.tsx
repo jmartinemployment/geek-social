@@ -1,12 +1,12 @@
 import { AppShell } from "@/components/AppShell";
-import { requireAccessToken } from "@/lib/auth/session";
+import { verifySession } from "@/lib/dal";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireAccessToken();
+  await verifySession();
 
   return <AppShell>{children}</AppShell>;
 }

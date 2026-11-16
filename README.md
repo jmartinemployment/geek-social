@@ -22,44 +22,74 @@ Every code and Reviewer rule is put into plain words in one place, `src/lib/soci
 
 ## How it talks to GeekAPI
 
-- **Sign-in:** GeekOAuth, Authorization Code with PKCE, public client `geek-social`, the same
-  arrangement as Content Creator. Tokens live in httpOnly cookies; `src/proxy.ts` refreshes the
-  access token before a page renders.
+- **Sign-in:** GeekOAuth, Authorization Code with PKCE (S256), as a confidential Backend-for-Frontend
+  client `geek-social` (`openid-client` and `jose`, no Auth.js). `/api/auth/login` and
+  `/api/auth/register` generate the PKCE verifier, state and nonce on the server, seal them in a
+  short-lived encrypted cookie, and redirect; `/api/auth/callback` checks the state, exchanges the
+  code with the client secret and the verifier, verifies the ID token against GeekOAuth's JWKS
+  (signature, issuer, audience, expiry, nonce), and stores the session in an encrypted `HttpOnly`,
+  `SameSite=Lax` cookie (a JWE split across `gs_session.0`, `.1`, ...). No token reaches the
+  browser's JavaScript. `/api/auth/logout` (POST, same origin only) clears the cookies and redirects
+  to GeekOAuth's `end_session_endpoint` with the ID token as the hint.
+- **Sign-up:** never handled here. `/api/auth/register` redirects to GeekOAuth's `/Account/Register`
+  with the whole `/connect/authorize` request as `returnUrl`. GeekOAuth requires a confirmed email
+  before sign-in, so the person registers, confirms, signs in once at GeekOAuth, and OpenIddict then
+  issues the code to `/api/auth/callback` with the original challenge and state. The sign-up cookie
+  lives an hour for that reason; a sign-in cookie lives ten minutes.
+- **Session renewal:** `src/proxy.ts` renews the access token before a page renders and stores the
+  rotated refresh token in the same response. `fetchWithAuth()` (`src/lib/api-client.ts`) does the
+  same in Route Handlers and Server Actions, and retries once on a 401. Requests that arrive together
+  share one refresh. GeekOAuth refusing the refresh token (`invalid_grant`) ends the session; any
+  other failure (GeekOAuth unreachable) does not, and is reported to the person. `src/lib/dal.ts`
+  `verifySession()` re-checks the session wherever a Server Component reads data.
 - **REST:** the browser calls `/api/social/<path>` on this app, which forwards to
   `<GeekAPI>/api/social/<path>` with the signed-in person's Bearer token. Scopes asked for:
-  `openid profile email offline_access geeksocial.manage`.
-- **Live updates:** SignalR only, to `<GeekAPI>/hubs/social-realtime`, with the access token from
-  `/api/auth/hub-token` as `accessTokenFactory`. A message (`draftChanged`, `commentChanged`,
-  `accountChanged`) carries ids and states; the page then reads the item again through REST. After
-  every connect and reconnect each page reads again what it shows. Nothing polls on a timer. When
-  the connection is down, a banner says so on every page.
+  `openid profile email roles offline_access geeksocial.manage`.
+- **Live updates:** the server holds the SignalR connection to `<GeekAPI>/hubs/social-realtime`
+  (long polling, token in the Authorization header) and forwards each message down a Server-Sent
+  Events stream at `/api/live-updates`. The browser's `EventSource` sends only its cookie. A message
+  (`draftChanged`, `commentChanged`, `accountChanged`) carries ids and states; the page then reads
+  the item again through REST. The stream ends on schedule about every 280 seconds so the next one
+  starts with a renewed sign-in (a stream cannot store a rotated refresh token), and after every
+  connect each page reads again what it shows. A refusal that retrying cannot fix (401, 403) stops
+  the stream with its reason. Nothing polls on a timer. When the connection is down, a banner says
+  so on every page.
 
 ## Environment variables
 
+All five are required. They are checked when the server starts and when the app is built, so a missing
+or malformed one stops the start or the build and names the variable; values are never printed.
+
 | Name | What it is |
 |---|---|
-| `NEXT_PUBLIC_AUTH_URL` | GeekOAuth base URL. Default `https://auth.geekatyourspot.com`. |
-| `NEXT_PUBLIC_APP_URL` | This app's origin; builds the redirect and post-logout URIs. If unset, `https://$VERCEL_PROJECT_PRODUCTION_URL` on Vercel, else `http://localhost:3006`. Set it on every deployment. |
-| `NEXT_PUBLIC_OAUTH_CLIENT_ID` | GeekOAuth public client id. Default `geek-social`. |
-| `NEXT_PUBLIC_GEEK_API_URL` | GeekAPI base URL: the REST proxy target and the hub host. Default `https://api.geekatyourspot.com`. |
+| `OAUTH_ISSUER_URL` | GeekOAuth's issuer, e.g. `https://auth.geekatyourspot.com`. https, except localhost. |
+| `OAUTH_CLIENT_ID` | The confidential client's id: `geek-social`. |
+| `OAUTH_CLIENT_SECRET` | The client's secret, at least 16 characters. Server only. GeekOAuth holds the same value as `GEEK_SOCIAL_CLIENT_SECRET`. |
+| `OAUTH_REDIRECT_URI` | This app's callback: `<origin>/api/auth/callback`. Must equal a redirect URI registered on the client. The origin also builds the post-logout address `<origin>/signed-out`. |
+| `SESSION_SECRET` | At least 32 characters; the key for the session and sign-in cookies. Changing it signs everyone out. |
 
-See `.env.example`. Copy it to `.env.local` for local work.
+`NEXT_PUBLIC_GEEK_API_URL` (optional) is GeekAPI's base URL, the REST proxy target and the hub host.
+Default `https://api.geekatyourspot.com`.
+
+Generate a secret with `openssl rand -base64 32`. See `.env.example`; copy it to `.env.local` for
+local work.
 
 ## Addresses to register
 
-GeekOAuth client `geek-social`:
+GeekOAuth client `geek-social` (confidential, PKCE required, set by GeekOAuth's seed when
+`GEEK_SOCIAL_CLIENT_SECRET` is set there):
 
 | | Redirect URI | Post-logout redirect URI |
 |---|---|---|
-| Production | `https://geek-social.geekatyourspot.com/auth/callback` | `https://geek-social.geekatyourspot.com/signed-out` |
-| Local | `http://localhost:3006/auth/callback` | `http://localhost:3006/signed-out` |
+| Production | `https://geek-social.geekatyourspot.com/api/auth/callback` | `https://geek-social.geekatyourspot.com/signed-out` |
+| Local | `http://localhost:3006/api/auth/callback` | `http://localhost:3006/signed-out` |
 
 Meta app, Valid OAuth Redirect URIs: `<origin>/connect/meta/callback` for each origin above. The
 address is taken from the origin the browser is on, so the connect returns to the same signed-in
 session.
 
-GeekAPI must allow these origins for the hub: `https://geek-social.geekatyourspot.com`,
-`http://localhost:3006`.
+The browser no longer calls GeekAPI directly (REST goes through `/api/social`, live updates through
+`/api/live-updates`), so GeekAPI's CORS list no longer needs this app's origins.
 
 Do not register `https://geek-social.vercel.app`: that host is not this project's (this project's
 Vercel addresses are `geek-social-coral.vercel.app` and the production host), so a redirect there
@@ -69,8 +99,8 @@ would hand sign-in codes to whoever owns it. See `AUDIT.md`.
 
 ```bash
 npm run dev        # http://localhost:3006
-npm run build      # production build
+npm run build      # production build (needs the five variables above)
 npm run lint       # eslint
 npm run typecheck  # tsc --noEmit
-npm test           # unit tests and the source rules (no em dash, no timers, no raw sockets, no browser storage)
+npm test           # unit tests, the sign-in flow against a stand-in GeekOAuth, and the source rules
 ```

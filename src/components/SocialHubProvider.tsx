@@ -10,11 +10,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { errorText } from "@/lib/errors";
-import { HUB_MESSAGES, createSocialHubConnection, type HubMessageName } from "@/services/social-hub";
+import type { HubMessageName } from "@/lib/live-protocol";
+import { openLiveStream } from "@/services/live-stream";
 
 /**
- * The one live connection: SignalR to GeekAPI's /hubs/social-realtime.
+ * The one live connection: a Server-Sent Events stream from this app's own server, which holds the
+ * SignalR connection to GeekAPI's /hubs/social-realtime with the person's token. The browser never
+ * holds that token.
  *
  * Messages carry ids and states only. A page that hears one reads the item again through the REST
  * routes. Nothing on this screen polls on a timer; when the connection is down the screen says so,
@@ -51,64 +53,34 @@ export function SocialHubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Set when this connection is torn down (unmount, or a manual reconnect replacing it). Anything
-    // it reports after that belongs to a connection nobody is looking at.
+    // Set when this stream is torn down (unmount, or a manual reconnect replacing it). Anything it
+    // reports after that belongs to a stream nobody is looking at.
     let disposed = false;
 
-    const connection = createSocialHubConnection({
-      // Each failed attempt says why it failed, not only the first drop.
-      onAttemptFailed: (reason) => {
-        if (!disposed) setState({ kind: "reconnecting", reason });
-      },
-      // A refusal retrying cannot fix (the session ended, the permission is missing) stops here with
-      // its own reason, which the generic close below must not overwrite.
-      onGiveUp: (reason) => {
-        if (!disposed) setState({ kind: "off", reason });
-      },
-    });
-
-    for (const name of HUB_MESSAGES) {
-      connection.on(name, (body: unknown) => {
-        if (!disposed) emit(name, body);
-      });
-    }
-    connection.onreconnecting((err) => {
-      if (!disposed) setState({ kind: "reconnecting", reason: err ? errorText(err) : null });
-    });
-    connection.onreconnected(() => {
-      if (disposed) return;
-      setState({ kind: "live" });
-      emit("resync", null);
-    });
-    connection.onclose((err) => {
-      if (disposed) return;
-      setState((current) =>
-        current.kind === "off"
-          ? current
-          : {
-              kind: "off",
-              reason: err ? errorText(err) : "The live connection closed and could not reconnect.",
-            },
-      );
-    });
-
-    connection.start().then(
-      () => {
+    const close = openLiveStream({
+      // The server's hub connection is up, on the first connect and after every reconnect: each page
+      // reads again whatever it may have missed.
+      onLive: () => {
         if (disposed) return;
         setState({ kind: "live" });
         emit("resync", null);
       },
-      (err: unknown) => {
-        if (disposed) return;
-        setState({ kind: "off", reason: errorText(err) });
+      onMessage: (name, body) => {
+        if (!disposed) emit(name, body);
       },
-    );
+      onReconnecting: (reason) => {
+        if (!disposed) setState({ kind: "reconnecting", reason });
+      },
+      // A refusal retrying cannot fix (the session ended, the permission is missing) arrives with its
+      // own reason and stops here.
+      onOff: (reason) => {
+        if (!disposed) setState({ kind: "off", reason });
+      },
+    });
 
     return () => {
       disposed = true;
-      connection.stop().catch((err: unknown) => {
-        console.error("GeekSocial live connection did not stop cleanly:", errorText(err));
-      });
+      close();
     };
   }, [attempt, emit]);
 

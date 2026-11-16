@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { HubSignInError, retryDecision } from "@/services/social-hub";
+import { HubSignInError, httpStatusOf, retryDecision } from "@/lib/server/hub-bridge";
 
 const outage = new Error("Failed to fetch");
 
@@ -31,4 +31,22 @@ test("a server error or a lost connection is not a verdict on the sign-in", () =
   const serverError = Object.assign(new Error("HTTP 503"), { statusCode: 503 });
   assert.equal(retryDecision(1, serverError).kind, "retry");
   assert.equal(retryDecision(1, undefined).kind, "retry");
+});
+
+test("a refused negotiation is read from SignalR's wrapped message, because the wrapper carries no statusCode", () => {
+  const wrapped = (status: string, text: string) =>
+    new Error(`Failed to complete negotiation with the server: Error: ${text}: Status code '${status}'`);
+  const unauthorized = retryDecision(0, wrapped("401", "Unauthorized"));
+  const forbidden = retryDecision(0, wrapped("403", "Forbidden"));
+  assert.equal(unauthorized.kind, "stop");
+  assert.match(unauthorized.kind === "stop" ? unauthorized.reason : "", /401/);
+  assert.equal(forbidden.kind, "stop");
+  assert.match(forbidden.kind === "stop" ? forbidden.reason : "", /geeksocial\.manage/);
+  assert.equal(retryDecision(0, wrapped("503", "Service Unavailable")).kind, "retry");
+});
+
+test("the status is read from the error when SignalR does carry it", () => {
+  assert.equal(httpStatusOf(Object.assign(new Error("x"), { statusCode: 403 })), 403);
+  assert.equal(httpStatusOf(new Error("no status here")), undefined);
+  assert.equal(httpStatusOf(undefined), undefined);
 });

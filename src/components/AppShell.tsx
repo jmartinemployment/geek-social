@@ -42,7 +42,7 @@ function HubBanner() {
       <button type="button" onClick={reconnect} className="font-semibold underline">
         Reconnect
       </button>
-      <a href="/api/auth/start" className="font-semibold underline">
+      <a href="/api/auth/login" className="font-semibold underline">
         Sign in again
       </a>
     </div>

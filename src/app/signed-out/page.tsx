@@ -17,12 +17,18 @@ export default function SignedOutPage() {
           You are signed out.
         </h1>
         <div className="mt-10 flex flex-wrap gap-3">
-          {/* Plain <a>: a Next Link soft navigation fetches /api/auth/start and breaks the OAuth redirect. */}
+          {/* Plain <a>: a Next Link soft navigation fetches /api/auth/login and breaks the OAuth redirect. */}
           <a
-            href="/api/auth/start"
+            href="/api/auth/login"
             className="inline-flex items-center justify-center rounded-md bg-[var(--gcc-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--gcc-accent-deep)]"
           >
             Sign in
+          </a>
+          <a
+            href="/api/auth/register"
+            className="inline-flex items-center justify-center rounded-md border border-white/40 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            Create account
           </a>
         </div>
       </main>

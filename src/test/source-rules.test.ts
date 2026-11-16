@@ -5,8 +5,9 @@ import { test } from "node:test";
 
 /**
  * Standing rules for this repo's source, checked on every test run:
- * no em dash in UI text or comments, live updates by SignalR only (no timers, no raw sockets,
- * no server-sent events), and nothing kept in browser storage.
+ * no em dash in UI text or comments, live updates only over the one stream (no polling timers, no raw
+ * sockets, and a raw EventSource only in the one file that opens that stream), and nothing kept in
+ * browser storage.
  */
 
 const root = join(process.cwd(), "src");
@@ -40,8 +41,9 @@ test("nothing polls on a timer", () => {
   assert.deepEqual(offenders(/\bsetInterval\s*\(/), []);
 });
 
-test("no raw WebSocket or EventSource: live updates come over SignalR only", () => {
-  assert.deepEqual(offenders(/new\s+(WebSocket|EventSource)\s*\(/), []);
+test("no raw WebSocket anywhere, and a raw EventSource only in the live stream client", () => {
+  assert.deepEqual(offenders(/new\s+WebSocket\s*\(/), []);
+  assert.deepEqual(offenders(/new\s+EventSource\s*\(/), ["src/services/live-stream.ts"]);
 });
 
 test("nothing is kept in browser storage", () => {

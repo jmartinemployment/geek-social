@@ -1,14 +1,15 @@
 import { NextRequest } from "next/server";
-import { getAccessTokenWithRefresh } from "@/lib/auth/session";
+import { fetchWithAuth, SessionEndedError } from "@/lib/api-client";
 import { apiConfig } from "@/lib/config";
 import { errorText } from "@/lib/errors";
+import { SessionRenewalError } from "@/lib/session-renewal";
 import { socialTargetPath } from "@/lib/social/proxy-path";
 
 /**
  * Same-origin proxy to GeekAPI's GeekSocial routes: /api/social/<path> here is
- * <GeekAPI>/api/social/<path> there. It forwards the signed-in person's OAuth Bearer and never
- * substitutes another credential when that token is refused. The token never reaches the browser
- * through this route.
+ * <GeekAPI>/api/social/<path> there. It forwards the signed-in person's OAuth Bearer from the encrypted
+ * session cookie and never substitutes another credential when that token is refused. The token never
+ * reaches the browser through this route.
  */
 
 // Approve sends to the platform and resync reads every stored post's comments; the platform
@@ -26,41 +27,27 @@ async function forward(request: NextRequest, path: string[]): Promise<Response> 
   const targetUrl = new URL(targetPath, apiConfig.baseUrl);
   targetUrl.search = request.nextUrl.search;
 
-  let token: string | null;
-  try {
-    token = await getAccessTokenWithRefresh();
-  } catch (err) {
-    const detail = errorText(err);
-    return Response.json(
-      { error: `Could not refresh the sign-in with GeekOAuth: ${detail}` },
-      { status: 502 },
-    );
-  }
-  if (!token) {
-    return Response.json(
-      { error: "Your sign-in has ended. Sign in again." },
-      { status: 401 },
-    );
-  }
-
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
   const bufferedBody = hasBody ? await request.arrayBuffer() : undefined;
 
   const headers = new Headers();
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
-  headers.set("Authorization", `Bearer ${token}`);
 
   let response: Response;
   try {
-    response = await fetch(targetUrl, {
-      method: request.method,
-      headers,
-      body: bufferedBody,
-      redirect: "manual",
-      cache: "no-store",
-    });
+    response = await fetchWithAuth(
+      targetUrl,
+      { method: request.method, headers, body: bufferedBody, redirect: "manual" },
+      { onSessionEnded: "throw" },
+    );
   } catch (err) {
+    if (err instanceof SessionEndedError) {
+      return Response.json({ error: err.message }, { status: 401 });
+    }
+    if (err instanceof SessionRenewalError) {
+      return Response.json({ error: err.message }, { status: 502 });
+    }
     // A timeout, a reset connection, or GeekAPI not answering. Plain text: the screen shows a body
     // that is not JSON as it came.
     const detail = errorText(err);
