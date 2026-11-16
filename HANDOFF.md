@@ -11,8 +11,7 @@ any state it describes before acting on it.
 
 ## Verified on 2026-11-15
 
-Run from this repo on `main` (`github.com/jmartinemployment/geek-social`). The commits after
-`0720473` are local and not pushed:
+Run from this repo on `main` (`github.com/jmartinemployment/geek-social`), pushed 2026-11-16:
 
 - `npm run typecheck`: clean.
 - `npm run lint`: clean.
@@ -41,11 +40,9 @@ connection is down.
   checked.
 - **`https://geek-social.vercel.app` is not this project.** This project's Vercel addresses are
   `geek-social-coral.vercel.app` and `geek-social.geekatyourspot.com`; that host serves a different
-  app. The README and `.env.example` no longer list it. Its entries are removed in uncommitted edits to
-  GeekOAuth (`OidcPublicClientSeeds.cs`, `SecurityHeadersMiddleware.cs`) and GeekBackend
-  (`CorsOriginParser.cs`, `docs/GEEK-SOCIAL-API.md`, the 2026-11-12 handoff). Until GeekOAuth is
-  redeployed the live client still accepts it, and the Meta app console entry still has to be removed
-  by hand. See `AUDIT.md`.
+  app. It is removed from the README, `.env.example`, GeekOAuth (`9b02de5`) and GeekBackend
+  (`346dfe3`), both pushed and deployed on 2026-11-16; GeekOAuth now answers 400 for it. The Meta app
+  console entry still has to be removed by hand. See `AUDIT.md`.
 - **No component or page tests.** `DraftCard`, the six pages and the hooks are covered only by
   typecheck, lint and build.
 - **Facebook Pages only.** Other platforms are connectors in GeekAPI, not work in this repo; the
@@ -80,6 +77,5 @@ displayed as it came), and a refused token is never replaced with another creden
 2. Run locally, sign in, connect a Page on `/accounts`, read `/activity`.
 3. Comment on a post, watch the draft arrive over SignalR, edit and approve it. Leave auto-send off
    until several drafts have been reviewed.
-4. Review, commit and deploy the GeekOAuth and GeekBackend edits that remove `geek-social.vercel.app`,
-   and remove it from the Meta app console (`AUDIT.md` finding 1).
+4. Remove `geek-social.vercel.app` from the Meta app console (`AUDIT.md` finding 1).
 5. Add tests for the draft actions in `src/components/social/DraftCard.tsx`.

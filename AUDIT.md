@@ -7,7 +7,7 @@ Scope: the unfinished items in `plans/geek-social-engagement-agent-2026-11-08.md
 
 | # | Finding | Status |
 |---|---|---|
-| 1 | `geek-social.vercel.app` redirect URI | Removed from this README and `.env.example`, and from code in GeekOAuth (client seed, CSP host list) and GeekBackend (CORS origins, API doc, handoff). **Those two repos' edits are uncommitted and not deployed; the seed only takes effect when GeekOAuth restarts. The Meta app console entry is still yours to remove.** |
+| 1 | `geek-social.vercel.app` redirect URI | Fixed and deployed 2026-11-16: removed from this repo, GeekOAuth (`9b02de5`) and GeekBackend (`346dfe3`). An authorize probe with that redirect URI now answers 400; `geek-social.geekatyourspot.com` and `localhost:3006` still reach the login page. **The Meta app console entry is still yours to remove.** |
 | 2 | Outage signs everyone out | Open. A fix was made and then reverted at your request, so `proxy.ts` and `auth-tokens.ts` are as they were at `0720473` |
 | 3 | Hub gives up after about 19 seconds | Fixed: it retries for as long as GeekAPI is down, and stops with the reason and a sign-in link when the session has ended or the permission is missing (tests added) |
 | 4 | Phase 6 proof and its tests | Open |
