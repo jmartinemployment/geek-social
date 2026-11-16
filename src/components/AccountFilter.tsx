@@ -13,11 +13,14 @@ export function AccountFilter({
   accountsError,
   value,
   onChange,
+  allowAll = true,
 }: {
   accounts: SocialAccount[] | null;
   accountsError: string | null;
   value: string | null;
   onChange: (accountId: string | null) => void;
+  /** False for a list GeekAPI only gives for one account: there is no "All accounts" choice. */
+  allowAll?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -28,7 +31,7 @@ export function AccountFilter({
           onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
           className={`${inputClass} w-auto py-1.5`}
         >
-          <option value="">All accounts</option>
+          {allowAll ? <option value="">All accounts</option> : null}
           {(accounts ?? []).map((a) => (
             <option key={a.id} value={a.id}>
               {a.displayName} ({platformWords(a.platform)})

@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { errorText } from "@/lib/errors";
 import { HUB_MESSAGES, createSocialHubConnection, type HubMessageName } from "@/services/social-hub";
 
 /**
@@ -38,11 +39,6 @@ interface HubContextValue {
 
 const HubContext = createContext<HubContextValue | null>(null);
 
-function reasonOf(err: unknown): string {
-  if (err instanceof Error && err.message) return err.message;
-  return String(err);
-}
-
 export function SocialHubProvider({ children }: { children: React.ReactNode }) {
   const listeners = useRef(new Map<HubEventName, Set<Listener>>());
   const [state, setState] = useState<HubState>({ kind: "connecting" });
@@ -55,10 +51,21 @@ export function SocialHubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const connection = createSocialHubConnection();
     // Set when this connection is torn down (unmount, or a manual reconnect replacing it). Anything
     // it reports after that belongs to a connection nobody is looking at.
     let disposed = false;
+
+    const connection = createSocialHubConnection({
+      // Each failed attempt says why it failed, not only the first drop.
+      onAttemptFailed: (reason) => {
+        if (!disposed) setState({ kind: "reconnecting", reason });
+      },
+      // A refusal retrying cannot fix (the session ended, the permission is missing) stops here with
+      // its own reason, which the generic close below must not overwrite.
+      onGiveUp: (reason) => {
+        if (!disposed) setState({ kind: "off", reason });
+      },
+    });
 
     for (const name of HUB_MESSAGES) {
       connection.on(name, (body: unknown) => {
@@ -66,7 +73,7 @@ export function SocialHubProvider({ children }: { children: React.ReactNode }) {
       });
     }
     connection.onreconnecting((err) => {
-      if (!disposed) setState({ kind: "reconnecting", reason: err ? reasonOf(err) : null });
+      if (!disposed) setState({ kind: "reconnecting", reason: err ? errorText(err) : null });
     });
     connection.onreconnected(() => {
       if (disposed) return;
@@ -75,10 +82,14 @@ export function SocialHubProvider({ children }: { children: React.ReactNode }) {
     });
     connection.onclose((err) => {
       if (disposed) return;
-      setState({
-        kind: "off",
-        reason: err ? reasonOf(err) : "The live connection closed and could not reconnect.",
-      });
+      setState((current) =>
+        current.kind === "off"
+          ? current
+          : {
+              kind: "off",
+              reason: err ? errorText(err) : "The live connection closed and could not reconnect.",
+            },
+      );
     });
 
     connection.start().then(
@@ -89,14 +100,14 @@ export function SocialHubProvider({ children }: { children: React.ReactNode }) {
       },
       (err: unknown) => {
         if (disposed) return;
-        setState({ kind: "off", reason: reasonOf(err) });
+        setState({ kind: "off", reason: errorText(err) });
       },
     );
 
     return () => {
       disposed = true;
       connection.stop().catch((err: unknown) => {
-        console.error("GeekSocial live connection did not stop cleanly:", reasonOf(err));
+        console.error("GeekSocial live connection did not stop cleanly:", errorText(err));
       });
     };
   }, [attempt, emit]);

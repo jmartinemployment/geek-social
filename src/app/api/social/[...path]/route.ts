@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getAccessTokenWithRefresh } from "@/lib/auth/session";
 import { apiConfig } from "@/lib/config";
+import { errorText } from "@/lib/errors";
 import { socialTargetPath } from "@/lib/social/proxy-path";
 
 /**
@@ -19,7 +20,7 @@ async function forward(request: NextRequest, path: string[]): Promise<Response> 
   try {
     targetPath = socialTargetPath(path);
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
+    const detail = errorText(err);
     return Response.json({ error: detail }, { status: 400 });
   }
   const targetUrl = new URL(targetPath, apiConfig.baseUrl);
@@ -29,7 +30,7 @@ async function forward(request: NextRequest, path: string[]): Promise<Response> 
   try {
     token = await getAccessTokenWithRefresh();
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
+    const detail = errorText(err);
     return Response.json(
       { error: `Could not refresh the sign-in with GeekOAuth: ${detail}` },
       { status: 502 },
@@ -62,7 +63,7 @@ async function forward(request: NextRequest, path: string[]): Promise<Response> 
   } catch (err) {
     // A timeout, a reset connection, or GeekAPI not answering. Plain text: the screen shows a body
     // that is not JSON as it came.
-    const detail = err instanceof Error ? err.message : String(err);
+    const detail = errorText(err);
     return new Response(`Could not reach GeekAPI: ${detail}`, {
       status: 502,
       headers: { "content-type": "text/plain" },

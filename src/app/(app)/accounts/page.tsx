@@ -214,6 +214,12 @@ function AccountCard({
             Replies in a ticked category go out as soon as the Reviewer passes them. Complaints and
             sensitive comments always wait for a person.
           </p>
+          {form.autoSendCategories.includes("spam") ? (
+            <p className="mt-1 text-xs text-red-600">
+              Spam is ticked: every comment sorted as spam gets a public reply with no one reading it
+              first, and that reply can draw more attention to the spam.
+            </p>
+          ) : null}
           <div className="mt-2 flex flex-wrap gap-4">
             {AUTO_SEND_CATEGORIES.map((category) => (
               <label key={category} className="flex items-center gap-2 text-sm text-foreground">

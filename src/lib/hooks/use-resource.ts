@@ -10,6 +10,10 @@ import { errorText } from "@/services/social-api";
  * data on screen and sets `refreshing`. A failed load clears the data and carries the error, so a
  * failure is never shown as an empty list. Reloads asked for while one is in flight are folded into
  * one more load after it, so a burst of live messages costs two requests, not one per message.
+ *
+ * `setData` edits what is on screen from a live message. A load already in flight read the server
+ * before that message, so its answer would put the older list back; a load that finishes after a
+ * `setData` is therefore followed by one more load rather than trusted.
  */
 export function useResource<T>(key: string, load: () => Promise<T>) {
   const [nonce, setNonce] = useState(0);
@@ -22,10 +26,12 @@ export function useResource<T>(key: string, load: () => Promise<T>) {
   const runLoad = useEffectEvent(load);
   const inFlight = useRef(false);
   const again = useRef(false);
+  const editedDuringLoad = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     inFlight.current = true;
+    editedDuringLoad.current = false;
     runLoad().then(
       (data) => {
         if (cancelled) return;
@@ -38,6 +44,10 @@ export function useResource<T>(key: string, load: () => Promise<T>) {
     ).finally(() => {
       if (cancelled) return;
       inFlight.current = false;
+      if (editedDuringLoad.current) {
+        editedDuringLoad.current = false;
+        again.current = true;
+      }
       if (again.current) {
         again.current = false;
         setNonce((n) => n + 1);
@@ -58,6 +68,7 @@ export function useResource<T>(key: string, load: () => Promise<T>) {
   }, []);
 
   const setData = useCallback((update: (current: T) => T) => {
+    if (inFlight.current) editedDuringLoad.current = true;
     setResult((r) => (r && r.data !== null ? { ...r, data: update(r.data) } : r));
   }, []);
 

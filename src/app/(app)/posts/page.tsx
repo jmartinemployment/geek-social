@@ -16,6 +16,7 @@ import {
   secondaryButton,
 } from "@/components/ui";
 import { accountName, useAccounts } from "@/lib/hooks/use-accounts";
+import { mayHaveHappened } from "@/lib/social/outcome";
 import { useResource } from "@/lib/hooks/use-resource";
 import type { LinkPost, SocialAccount, StoredPost } from "@/lib/social/types";
 import { platformWords, ruleWords } from "@/lib/social/words";
@@ -55,8 +56,14 @@ const orNull = (value: string) => (value.trim() === "" ? null : value.trim());
 /** Publish a link post: the Post Writer suggests copy, a person edits it, then it is published once. */
 export default function PostsPage() {
   const accounts = useAccounts();
-  const [filterAccountId, setFilterAccountId] = useState<string | null>(null);
-  const posts = useResource<StoredPost[]>(`posts|${filterAccountId ?? ""}`, () => listPosts(filterAccountId));
+  const [chosenAccountId, setChosenAccountId] = useState<string | null>(null);
+  // GeekAPI lists posts for one account only (a request without one is a 400), so there is always an
+  // account here: the one chosen, else the first connected one.
+  const accountId = chosenAccountId ?? accounts.data?.[0]?.id ?? null;
+  const posts = useResource<StoredPost[]>(`posts|${accountId ?? ""}`, async () => {
+    if (accountId === null) throw new Error("Choose an account to list its posts.");
+    return listPosts(accountId);
+  });
 
   return (
     <PageFrame
@@ -71,9 +78,10 @@ export default function PostsPage() {
           <>
             <AccountFilter
               accounts={accounts.data}
-              accountsError={null}
-              value={filterAccountId}
-              onChange={setFilterAccountId}
+              accountsError={accounts.error}
+              value={accountId}
+              onChange={setChosenAccountId}
+              allowAll={false}
             />
             <button type="button" onClick={posts.reload} className={quietButton}>
               Reload
@@ -81,8 +89,14 @@ export default function PostsPage() {
           </>
         }
       >
-        {posts.loading ? <Loading what="posts" /> : null}
-        {posts.error ? <ErrorNote message={`Posts did not load: ${posts.error}`} onRetry={posts.reload} /> : null}
+        {accountId === null && accounts.data ? (
+          <Notice tone="warn">No Page is connected. Connect one on Accounts, and its posts are listed here.</Notice>
+        ) : null}
+        {accountId === null && !accounts.data && !accounts.error ? <Loading what="accounts" /> : null}
+        {accountId !== null && posts.loading ? <Loading what="posts" /> : null}
+        {accountId !== null && posts.error ? (
+          <ErrorNote message={`Posts did not load: ${posts.error}`} onRetry={posts.reload} />
+        ) : null}
         {posts.data ? (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted">
@@ -141,6 +155,9 @@ function PostWriter({
   const [error, setError] = useState<string | null>(null);
   const [violations, setViolations] = useState<string[]>([]);
   const [published, setPublished] = useState<string | null>(null);
+  // Set when a publish got no clear answer: the post may be live, so Publish stays off until the
+  // operator has looked at the Page.
+  const [uncertain, setUncertain] = useState<string | null>(null);
 
   const account = accounts?.find((a) => a.id === form.accountId) ?? null;
   const set = (field: keyof PostForm) => (e: { target: { value: string } }) =>
@@ -213,7 +230,13 @@ function PostWriter({
       if (err instanceof SocialApiError && err.code === "review_refused") {
         setViolations(err.violations);
       }
-      setError(`Not published: ${errorText(err)}`);
+      if (mayHaveHappened(err)) {
+        setUncertain(`The post may have been published. ${errorText(err)}`);
+        // The list is read again so a post that did go out shows up.
+        onPublished();
+      } else {
+        setError(`Not published: ${errorText(err)}`);
+      }
     }
     setBusy(null);
   }
@@ -304,6 +327,20 @@ function PostWriter({
           <ErrorNote message={error} />
         </div>
       ) : null}
+      {uncertain ? (
+        <div className="mt-4">
+          <Notice tone="warn">
+            <p className="font-semibold">Publishing did not get a clear answer.</p>
+            <p>{uncertain}</p>
+            <p>
+              Check the Page and the Published posts list below. Publishing again could post it twice.
+            </p>
+            <button type="button" onClick={() => setUncertain(null)} className={`${quietButton} mt-2`}>
+              I checked the Page: allow Publish again
+            </button>
+          </Notice>
+        </div>
+      ) : null}
       {published ? (
         <div className="mt-4">
           <Notice tone="good" onDismiss={() => setPublished(null)}>
@@ -313,7 +350,7 @@ function PostWriter({
       ) : null}
 
       <div className="mt-4">
-        <button type="button" onClick={() => void publish()} disabled={busy !== null || !canPublish} className={primaryButton}>
+        <button type="button" onClick={() => void publish()} disabled={busy !== null || !canPublish || uncertain !== null} className={primaryButton}>
           {busy === "publish" ? "Publishing…" : "Publish"}
         </button>
         {account ? (

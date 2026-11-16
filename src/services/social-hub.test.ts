@@ -1,12 +1,34 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { reconnectDelay } from "@/services/social-hub";
+import { HubSignInError, retryDecision } from "@/services/social-hub";
 
-test("the first reconnect attempts back off, then settle at 30 seconds", () => {
-  assert.deepEqual([0, 1, 2, 3, 4].map(reconnectDelay), [0, 1000, 3000, 5000, 10000]);
-  assert.equal(reconnectDelay(5), 30000);
+const outage = new Error("Failed to fetch");
+
+test("a short outage is retried: the first attempts back off, then settle at 30 seconds", () => {
+  const delays = [0, 1, 2, 3, 4, 5, 50, 5000].map((count) => retryDecision(count, outage));
+  assert.deepEqual(
+    delays,
+    [0, 1000, 3000, 5000, 10000, 30000, 30000, 30000].map((delayMs) => ({ kind: "retry", delayMs })),
+  );
 });
 
-test("the connection never stops trying", () => {
-  for (const count of [5, 50, 5000]) assert.equal(reconnectDelay(count), 30000);
+test("an ended session stops the retries and says why", () => {
+  const decision = retryDecision(0, new HubSignInError("Your sign-in has ended. Sign in again.", 401));
+  assert.deepEqual(decision, { kind: "stop", reason: "Your sign-in has ended. Sign in again." });
+});
+
+test("GeekAPI refusing the hub's sign-in with 401 or 403 stops the retries", () => {
+  const refused = (statusCode: number) => Object.assign(new Error(`HTTP ${statusCode}`), { statusCode });
+  const unauthorized = retryDecision(2, refused(401));
+  const forbidden = retryDecision(2, refused(403));
+  assert.equal(unauthorized.kind, "stop");
+  assert.match(unauthorized.kind === "stop" ? unauthorized.reason : "", /401/);
+  assert.equal(forbidden.kind, "stop");
+  assert.match(forbidden.kind === "stop" ? forbidden.reason : "", /geeksocial\.manage/);
+});
+
+test("a server error or a lost connection is not a verdict on the sign-in", () => {
+  const serverError = Object.assign(new Error("HTTP 503"), { statusCode: 503 });
+  assert.equal(retryDecision(1, serverError).kind, "retry");
+  assert.equal(retryDecision(1, undefined).kind, "retry");
 });

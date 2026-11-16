@@ -184,12 +184,44 @@ export const getDraft = (draftId: string) => request<ReplyDraft>(`/drafts/${id(d
 export const saveDraftText = (draftId: string, draftText: string) =>
   send<ReplyDraft>("PUT", `/drafts/${id(draftId)}`, { draftText });
 
-export const approveDraft = (draftId: string) =>
-  send<ApproveResult>("POST", `/drafts/${id(draftId)}/approve`);
+/**
+ * A draft action whose answer does not carry what the screen acts on is refused by name. The action
+ * may still have happened, so the message says to read the draft rather than guessing; the status
+ * (200) is what marks the answer as unreliable to callers.
+ */
+function unreadableAnswer(route: string, missing: string): SocialApiError {
+  return new SocialApiError(
+    `GeekAPI answered ${route} without ${missing}, so the result is not known. The action may have happened; the draft is read again below.`,
+    200,
+    null,
+    [],
+  );
+}
+
+function isSendOutcome(value: unknown): value is SendOutcome {
+  if (!value || typeof value !== "object") return false;
+  const fields = value as Record<string, unknown>;
+  return typeof fields.sent === "boolean" && typeof fields.held === "boolean";
+}
+
+function isDraft(value: unknown): value is ReplyDraft {
+  if (!value || typeof value !== "object") return false;
+  const fields = value as Record<string, unknown>;
+  return typeof fields.id === "string" && typeof fields.status === "string";
+}
+
+export async function approveDraft(draftId: string): Promise<ApproveResult> {
+  const route = "the approve";
+  const answer = await send<Partial<ApproveResult> | null>("POST", `/drafts/${id(draftId)}/approve`);
+  if (!isSendOutcome(answer?.send)) throw unreadableAnswer(route, "a send outcome");
+  if (!isDraft(answer?.draft)) throw unreadableAnswer(route, "the draft");
+  return { draft: answer.draft, send: answer.send };
+}
 
 /** Sends an approved draft a limit held back. GeekAPI answers `{ draft, send }`, as approve does. */
 export async function sendDraft(draftId: string): Promise<SendOutcome> {
-  const answer = await send<ApproveResult>("POST", `/drafts/${id(draftId)}/send`);
+  const answer = await send<Partial<ApproveResult> | null>("POST", `/drafts/${id(draftId)}/send`);
+  if (!isSendOutcome(answer?.send)) throw unreadableAnswer("the send", "a send outcome");
   return answer.send;
 }
 
@@ -210,7 +242,8 @@ export const likeComment = (commentId: string) =>
 
 // Posts
 
-export const listPosts = (accountId: string | null) =>
+/** GeekAPI refuses this route without an account (400 "accountId is required"), so one is required here. */
+export const listPosts = (accountId: string) =>
   request<StoredPost[]>(`/posts${query({ accountId, limit: LIST_LIMIT })}`);
 
 export const suggestPostCopy = (payload: PostCopyRequest) =>
@@ -224,8 +257,4 @@ export const publishPost = (accountId: string, post: LinkPost) =>
 export const listAudit = (accountId: string | null) =>
   request<AuditRow[]>(`/audit${query({ accountId, limit: LIST_LIMIT })}`);
 
-/** The sentence to show for any failure. */
-export function errorText(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  return String(err);
-}
+export { errorText } from "@/lib/errors";

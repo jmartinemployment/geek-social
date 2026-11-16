@@ -9,6 +9,7 @@ import {
   primaryButton,
   secondaryButton,
 } from "@/components/ui";
+import { mayHaveHappened } from "@/lib/social/outcome";
 import type { ReplyDraft, SendOutcome } from "@/lib/social/types";
 import {
   categoryWords,
@@ -86,8 +87,9 @@ export function DraftCard({
     setBusy("save");
     setError(null);
     setViolations([]);
+    let saved: ReplyDraft;
     try {
-      await saveDraftText(draft.id, editText);
+      saved = await saveDraftText(draft.id, editText);
     } catch (err) {
       if (err instanceof SocialApiError && err.code === "review_refused") {
         setViolations(err.violations);
@@ -97,7 +99,7 @@ export function DraftCard({
       return;
     }
     setEditText(null);
-    await readBack("Saved");
+    onChanged(saved);
     setBusy(null);
   }
 
@@ -114,6 +116,9 @@ export function DraftCard({
         setViolations(err.violations);
       }
       setError(errorText(err));
+      // Approve sends at once. If the answer was lost or unreadable the reply may be out, so the
+      // card shows what the server holds instead of a draft that still looks pending.
+      if (mayHaveHappened(err)) await readBack(errorText(err));
     }
     setBusy(null);
   }
@@ -127,6 +132,7 @@ export function DraftCard({
       result = await sendDraft(draft.id);
     } catch (err) {
       setError(errorText(err));
+      if (mayHaveHappened(err)) await readBack(errorText(err));
       setBusy(null);
       return;
     }
@@ -138,15 +144,16 @@ export function DraftCard({
   async function reject() {
     setBusy("reject");
     setError(null);
+    let rejected: ReplyDraft;
     try {
-      await rejectDraft(draft.id);
+      rejected = await rejectDraft(draft.id);
     } catch (err) {
       setError(errorText(err));
       setBusy(null);
       return;
     }
     setConfirmReject(false);
-    await readBack("Rejected");
+    onChanged(rejected);
     setBusy(null);
   }
 
@@ -361,6 +368,15 @@ function SendOutcomeNote({ outcome }: { outcome: SendOutcome }) {
         {outcome.code ? ` (${failureWords(outcome.code)})` : ""}
         {outcome.error ? ` ${outcome.error}` : ""}
       </p>
+    );
+  }
+  if (outcome.code === "outcome_unknown") {
+    return (
+      <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="font-semibold">Send not confirmed. The reply may already be on the platform.</p>
+        <p>Check the comment on the platform before posting a reply by hand. It is never sent again from here.</p>
+        {outcome.error ? <p>{outcome.error}</p> : null}
+      </div>
     );
   }
   return (

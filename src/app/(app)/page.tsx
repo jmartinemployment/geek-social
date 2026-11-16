@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccountFilter } from "@/components/AccountFilter";
 import { useHubEvent } from "@/components/SocialHubProvider";
 import { DraftCard } from "@/components/social/DraftCard";
@@ -29,6 +29,13 @@ export default function InboxPage() {
   const accounts = useAccounts();
   const tab = inboxTab(tabId);
 
+  // What the screen shows now, for a live message that finishes reading its draft after the operator
+  // has moved on. The handler's own closure is from the moment the message arrived.
+  const view = useRef({ tabId, accountId, tab, kept });
+  useEffect(() => {
+    view.current = { tabId, accountId, tab, kept };
+  });
+
   const list = useResource<InboxList>(`${tabId}|${accountId ?? ""}`, async () => {
     const reads = await Promise.all(tab.statuses.map((status) => listDrafts(status, accountId)));
     return {
@@ -40,6 +47,7 @@ export default function InboxPage() {
   useHubEvent("draftChanged", (body) => {
     const message = body as DraftChangedMessage;
     if (accountId && message.accountId !== accountId) return;
+    const startedOn = { tabId, accountId };
     void (async () => {
       let draft: ReplyDraft;
       try {
@@ -51,7 +59,12 @@ export default function InboxPage() {
         ]);
         return;
       }
-      list.setData((current) => ({ ...current, drafts: placeDraft(current.drafts, draft, tab, kept) }));
+      const now = view.current;
+      // The operator moved to another tab or account while the draft was being read. That view read
+      // its own list after this change, and this draft was placed against the old tab's rules, so it
+      // is not applied to the new list.
+      if (now.tabId !== startedOn.tabId || now.accountId !== startedOn.accountId) return;
+      list.setData((current) => ({ ...current, drafts: placeDraft(current.drafts, draft, now.tab, now.kept) }));
     })();
   });
   useHubEvent("resync", () => list.reload());
