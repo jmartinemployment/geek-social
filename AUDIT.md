@@ -8,7 +8,7 @@ Scope: the unfinished items in `plans/geek-social-engagement-agent-2026-11-08.md
 | # | Finding | Status |
 |---|---|---|
 | 1 | `geek-social.vercel.app` redirect URI | Removed from this README and `.env.example`. **Still registered on the GeekOAuth client and the Meta app; only you can remove it.** |
-| 2 | Outage signs everyone out | Fixed: `proxy.ts` clears the cookies only on `invalid_grant` and the like (test added) |
+| 2 | Outage signs everyone out | Open. A fix was made and then reverted at your request, so `proxy.ts` and `auth-tokens.ts` are as they were at `0720473` |
 | 3 | Hub gives up after about 19 seconds | Fixed: it retries every 30 seconds for as long as it is down (test added) |
 | 4 | Phase 6 proof and its tests | Open |
 | 5 | Proxy leaves `/api/social/` | Fixed: `.` and `..` segments answer 400 (test added) |
@@ -16,7 +16,7 @@ Scope: the unfinished items in `plans/geek-social-engagement-agent-2026-11-08.md
 | 7 | Refresh-token rotation race | Open, unverified |
 | 8 | No CI, no component tests | Open |
 
-After the fixes: typecheck and lint clean, 22 of 22 tests pass, build succeeds.
+After the fixes and the revert: typecheck and lint clean, 20 of 20 tests pass.
 
 ## Findings, most severe first
 

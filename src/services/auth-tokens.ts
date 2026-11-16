@@ -46,13 +46,9 @@ async function postToken(body: URLSearchParams): Promise<TokenResponse> {
   return res.json() as Promise<TokenResponse>;
 }
 
-/** True when GeekOAuth's answer to a refresh says the refresh token is spent or revoked. */
-export function isSessionDeadResponse(body: string): boolean {
-  return /invalid_grant|invalid_token|expired_token/i.test(body);
-}
-
 export function isSessionDeadError(error: unknown): boolean {
-  return isSessionDeadResponse(error instanceof Error ? error.message : String(error));
+  const msg = error instanceof Error ? error.message : String(error);
+  return /invalid_grant|invalid_token|expired_token/i.test(msg);
 }
 
 /** How long the access cookie lives: the token's own life less a minute, between 30 s and 10 min. */
