@@ -6,9 +6,10 @@ import { UrlAccountFilter } from "@/components/UrlAccountFilter";
 import { Badge, ErrorNote, Loading, Notice, PageFrame, Panel } from "@/components/ui";
 import { quietButton } from "@/components/ui-helpers";
 import { readAccounts, serverTransport } from "@/lib/server/social-api";
+import { readOrRefusal, resolveAccountFilter } from "@/lib/social/page-reads";
 import type { SocialAccount } from "@/lib/social/types";
 import { auditActionWords, auditOutcomeWords, failureWords, platformWords } from "@/lib/social/words";
-import { LIST_LIMIT, SocialApiError, auditApi, statusApi } from "@/services/social-api";
+import { LIST_LIMIT, auditApi, statusApi } from "@/services/social-api";
 
 /**
  * What GeekSocial is doing: the orchestrator's counts and failures, clearance, and the audit trail. Nothing here changes
@@ -19,8 +20,7 @@ import { LIST_LIMIT, SocialApiError, auditApi, statusApi } from "@/services/soci
 export default async function ActivityPage({ searchParams }: { searchParams: Promise<{ account?: string }> }) {
   const params = await searchParams;
   const accounts = await readAccounts();
-  const requested = params.account ?? null;
-  const accountId = requested && accounts.some((a) => a.id === requested) ? requested : null;
+  const { accountId, unknown } = resolveAccountFilter(accounts, params.account ?? null);
 
   return (
     <PageFrame
@@ -44,7 +44,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
           </>
         }
       >
-        {requested && !accountId ? (
+        {unknown ? (
           <div className="mb-4">
             <Notice tone="warn">The account in the address is not one of yours, so every account is shown.</Notice>
           </div>
@@ -58,25 +58,16 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
 }
 
 async function StatusPanel() {
-  let status;
-  try {
-    status = await statusApi(serverTransport).get();
-  } catch (err) {
-    // GeekAPI's own refusal is shown in this panel. Anything else is a bug and reaches the error page.
-    if (!(err instanceof SocialApiError)) throw err;
-    return <ErrorNote message={`Status did not load: ${err.message}`} />;
-  }
-  return <StatusView status={status} />;
+  // GeekAPI's own refusal is shown in this panel. Anything else is a bug and reaches the error page.
+  const read = await readOrRefusal(() => statusApi(serverTransport).get());
+  if (!read.ok) return <ErrorNote message={`Status did not load: ${read.message}`} />;
+  return <StatusView status={read.value} />;
 }
 
 async function AuditPanel({ accountId, accounts }: { accountId: string | null; accounts: SocialAccount[] }) {
-  let rows;
-  try {
-    rows = await auditApi(serverTransport).list(accountId);
-  } catch (err) {
-    if (!(err instanceof SocialApiError)) throw err;
-    return <ErrorNote message={`The audit did not load: ${err.message}`} />;
-  }
+  const read = await readOrRefusal(() => auditApi(serverTransport).list(accountId));
+  if (!read.ok) return <ErrorNote message={`The audit did not load: ${read.message}`} />;
+  const rows = read.value;
 
   return (
     <div className="flex flex-col gap-2">

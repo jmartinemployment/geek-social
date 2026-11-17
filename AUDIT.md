@@ -87,6 +87,8 @@ Checked by: reading the code. Not run against a real outage.
 
 ### 5. The proxy can leave `/api/social/` (low)
 
+**Resolved by removal, 2026-11-17:** the `/api/social/[...path]` route no longer exists, so there is nothing to leave `/api/social/`. The text below is the finding as it was.
+
 `src/app/api/social/[...path]/route.ts` builds the target with `new URL()`. A segment of `..`
 survives `encodeURIComponent` and is normalised away: `["..","..","health"]` becomes
 `https://api.geekatyourspot.com/health`. This is not exercised through Next (a signed-in session is

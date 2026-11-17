@@ -36,7 +36,7 @@ test("a page request with no session is sent to sign-in, remembering where it wa
 
 test("an API request with no session gets a 401 and its message, not a redirect", async () => {
   const { proxy } = await import("./proxy");
-  const res = await proxy(new NextRequest(`${APP}/api/social/drafts`));
+  const res = await proxy(new NextRequest(`${APP}/api/live-updates`));
   assert.equal(res.status, 401);
   assert.match(((await res.json()) as { error: string }).error, /sign-in has ended/);
 });
@@ -70,7 +70,7 @@ test("a refresh token GeekOAuth refuses ends the session: cookies cleared, then 
   assert.match(page.headers.get("location") ?? "", /\/api\/auth\/login\?returnTo=/);
   assert.ok(clearedCookies(page).includes("gs_session.0"));
 
-  const api = await proxy((await requestWithSession("/api/social/drafts", 10, "dead-token")).request);
+  const api = await proxy((await requestWithSession("/api/live-updates", 10, "dead-token")).request);
   assert.equal(api.status, 401);
   assert.ok(clearedCookies(api).includes("gs_session.0"));
 });

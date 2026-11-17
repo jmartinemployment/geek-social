@@ -3,11 +3,10 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DraftCard } from "@/components/social/DraftCard";
-import { proxyDraftActions } from "@/services/draft-actions";
 import { ToastProvider } from "@/components/Toaster";
 import type { ReplyDraft } from "@/lib/social/types";
 import { ruleWords } from "@/lib/social/words";
-import { installFakeApi, json, type FakeApi } from "@/test/fake-api";
+import { draftActionsOver, fakeApi, json, type FakeApi } from "@/test/fake-api";
 import { draft } from "@/test/fixtures";
 
 let api: FakeApi;
@@ -15,16 +14,14 @@ let changed: ReplyDraft[];
 
 beforeEach(() => {
   changed = [];
+  api = fakeApi({});
 });
-afterEach(() => {
-  cleanup();
-  api?.restore();
-});
+afterEach(cleanup);
 
 function show(current: ReplyDraft) {
   render(
     <ToastProvider>
-      <DraftCard draft={current} accountLabel="Acme Page" onChanged={(next) => changed.push(next)} actions={proxyDraftActions} />
+      <DraftCard draft={current} accountLabel="Acme Page" onChanged={(next) => changed.push(next)} actions={draftActionsOver(api.transport)} />
     </ToastProvider>,
   );
 }
@@ -32,7 +29,7 @@ function show(current: ReplyDraft) {
 const click = (name: string) => fireEvent.click(screen.getByRole("button", { name }));
 
 test("a pending draft shows the comment and the reply, and offers Approve, Edit and Reject", () => {
-  api = installFakeApi({});
+  api = fakeApi({});
   show(draft());
   screen.getByText("When do you open?");
   screen.getByText("Thanks for asking. We open at nine.");
@@ -40,13 +37,13 @@ test("a pending draft shows the comment and the reply, and offers Approve, Edit 
 });
 
 test("a draft with no reply text cannot be approved until a person writes one", () => {
-  api = installFakeApi({});
+  api = fakeApi({});
   show(draft({ draftText: "   " }));
   assert.equal((screen.getByRole("button", { name: "Approve and send" }) as HTMLButtonElement).disabled, true);
 });
 
 test("typing in the edit box saves nothing, and cancelling discards it", () => {
-  api = installFakeApi({});
+  api = fakeApi({});
   show(draft());
   click("Edit");
   fireEvent.change(screen.getByLabelText("Reply text"), { target: { value: "Something else" } });
@@ -60,7 +57,7 @@ test("typing in the edit box saves nothing, and cancelling discards it", () => {
 
 test("Save sends the text and uses the draft GeekAPI returns, without reading it again", async () => {
   const saved = draft({ draftText: "We open at nine, Monday to Friday." });
-  api = installFakeApi({ "PUT /drafts/d1": json(saved) });
+  api = fakeApi({ "PUT /drafts/d1": json(saved) });
   show(draft());
   click("Edit");
   fireEvent.change(screen.getByLabelText("Reply text"), { target: { value: saved.draftText } });
@@ -72,7 +69,7 @@ test("Save sends the text and uses the draft GeekAPI returns, without reading it
 });
 
 test("a Save the Reviewer refuses keeps the edit open, names the rules, and saves nothing", async () => {
-  api = installFakeApi({
+  api = fakeApi({
     "PUT /drafts/d1": json({ error: "The Reviewer refused this text.", code: "review_refused", violations: ["promises_refund"] }, 422),
   });
   show(draft());
@@ -81,13 +78,24 @@ test("a Save the Reviewer refuses keeps the edit open, names the rules, and save
   click("Save");
   await screen.findByText(/Nothing was saved/);
   screen.getByText(ruleWords("promises_refund"));
+  assert.equal(screen.queryAllByText(/The Reviewer refused this text/).length, 1, "the refusal is shown once, by the rules panel");
   screen.getByLabelText("Reply text");
+  assert.equal(changed.length, 0);
+});
+
+test("a Reviewer refusal that names no rules is still shown, in the error note", async () => {
+  api = fakeApi({
+    "POST /drafts/d1/approve": json({ error: "The Reviewer refused this draft.", code: "review_refused", violations: [] }, 422),
+  });
+  show(draft());
+  click("Approve and send");
+  await screen.findByText("The Reviewer refused this draft.");
   assert.equal(changed.length, 0);
 });
 
 test("Approve that sends shows Sent and hands up the returned draft with no re-read", async () => {
   const sent = draft({ status: "sent", sentPlatformCommentId: "r9" });
-  api = installFakeApi({ "POST /drafts/d1/approve": json({ draft: sent, send: { sent: true, held: false } }) });
+  api = fakeApi({ "POST /drafts/d1/approve": json({ draft: sent, send: { sent: true, held: false } }) });
   show(draft());
   click("Approve and send");
   await screen.findByText("Sent.");
@@ -97,7 +105,7 @@ test("Approve that sends shows Sent and hands up the returned draft with no re-r
 
 test("Approve that a send limit holds back says so, with the limit's reason", async () => {
   const held = draft({ status: "approved" });
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/approve": json({
       draft: held,
       send: { sent: false, held: true, code: "send_limit_reached", error: null, retryAfter: null },
@@ -110,20 +118,21 @@ test("Approve that a send limit holds back says so, with the limit's reason", as
 });
 
 test("an Approve that GeekAPI definitely refused names the rules and does not re-read the draft", async () => {
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/approve": json({ error: "The Reviewer refused this draft.", code: "review_refused", violations: ["promises_refund"] }, 422),
   });
   show(draft());
   click("Approve and send");
   await screen.findByText(/Nothing was sent/);
   screen.getByText(ruleWords("promises_refund"));
+  assert.equal(screen.queryAllByText(/The Reviewer refused this/).length, 1, "the refusal is shown once, by the rules panel");
   assert.equal(api.to("GET", "/drafts/d1").length, 0, "a coded refusal is definite: nothing happened, so nothing to read back");
   assert.equal(changed.length, 0);
 });
 
 test("an Approve whose answer was lost shows the error, then reads the draft the server holds", async () => {
   const actuallySent = draft({ status: "sent", sentPlatformCommentId: "r9" });
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/approve": new Response("Gateway Timeout", { status: 504 }),
     "GET /drafts/d1": json(actuallySent),
   });
@@ -135,7 +144,7 @@ test("an Approve whose answer was lost shows the error, then reads the draft the
 });
 
 test("an Approve answered with something unreadable names what is missing and reads the draft", async () => {
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/approve": json({}),
     "GET /drafts/d1": json(draft({ status: "sent" })),
   });
@@ -147,7 +156,7 @@ test("an Approve answered with something unreadable names what is missing and re
 });
 
 test("an Approve whose re-read also fails says the reply may be out and the re-read failed", async () => {
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/approve": new Response("Gateway Timeout", { status: 504 }),
     "GET /drafts/d1": new Response("Service Unavailable", { status: 503 }),
   });
@@ -158,7 +167,7 @@ test("an Approve whose re-read also fails says the reply may be out and the re-r
 });
 
 test("a send GeekAPI could not confirm is shown as not confirmed, never as Not sent", async () => {
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/approve": json({
       draft: draft({ status: "sending" }),
       send: { sent: false, held: false, code: "outcome_unknown", error: "The platform did not answer." },
@@ -172,7 +181,7 @@ test("a send GeekAPI could not confirm is shown as not confirmed, never as Not s
 });
 
 test("an Approve that was definitely not sent says Not sent, with the code's words", async () => {
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/approve": json({
       draft: draft({ status: "failed", failureCode: "token_expired" }),
       send: { sent: false, held: false, code: "token_expired", error: null },
@@ -185,7 +194,7 @@ test("an Approve that was definitely not sent says Not sent, with the code's wor
 
 test("a held draft's Send posts it, then reads the draft", async () => {
   const sent = draft({ status: "sent" });
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/send": json({ draft: sent, send: { sent: true, held: false } }),
     "GET /drafts/d1": json(sent),
   });
@@ -198,7 +207,7 @@ test("a held draft's Send posts it, then reads the draft", async () => {
 
 test("Reject asks first, and nothing is sent until it is confirmed", async () => {
   const rejected = draft({ status: "rejected" });
-  api = installFakeApi({ "POST /drafts/d1/reject": json(rejected) });
+  api = fakeApi({ "POST /drafts/d1/reject": json(rejected) });
   show(draft());
   click("Reject");
   assert.equal(api.calls.length, 0);
@@ -216,7 +225,7 @@ test("Reject asks first, and nothing is sent until it is confirmed", async () =>
 test("Reject shows the draft rejected at once, before the server has answered", async () => {
   let answer!: (response: Response) => void;
   const pending = new Promise<Response>((resolve) => (answer = resolve));
-  api = installFakeApi({ "POST /drafts/d1/reject": () => pending });
+  api = fakeApi({ "POST /drafts/d1/reject": () => pending });
   show(draft());
   click("Reject");
   click("Reject for good?");
@@ -228,7 +237,7 @@ test("Reject shows the draft rejected at once, before the server has answered", 
 
 test("a Reject the server refuses is taken back to what the server holds, with the reason", async () => {
   const serverHolds = draft({ status: "sent" });
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/reject": json({ error: "The draft changed.", code: "conflict" }, 409),
     "GET /drafts/d1": json(serverHolds),
   });
@@ -244,7 +253,7 @@ test("a Reject the server refuses is taken back to what the server holds, with t
 
 test("a Reject whose answer was lost shows what the server holds, which may be the rejection", async () => {
   const serverHolds = draft({ status: "rejected" });
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/reject": new Response("Gateway Timeout", { status: 504 }),
     "GET /drafts/d1": json(serverHolds),
   });
@@ -257,7 +266,7 @@ test("a Reject whose answer was lost shows what the server holds, which may be t
 
 test("a Reject that failed and cannot be read back is restored and says it may have happened", async () => {
   const original = draft();
-  api = installFakeApi({
+  api = fakeApi({
     "POST /drafts/d1/reject": new Response("Gateway Timeout", { status: 504 }),
     "GET /drafts/d1": new Response("Service Unavailable", { status: 503 }),
   });

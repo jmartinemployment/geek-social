@@ -33,16 +33,16 @@ Not verified at all:
 - Migration 0064 (`geek_seo`/tenant tables) applied on Railway Postgres, and the tenant isolation
   integration tests (all 10 failed before running: the helper applies only SQL scripts and `geek_seo` comes
   from EF migrations). Railway `get-logs` needs a permission rule from Jeff.
-- The coalescing in `useServerRefresh` (only the idle path is unit-tested).
-- The server pages themselves (unknown-account warning, list-failure panel) have no unit tests.
+- The server pages' rendering. What they decide is tested without a request, in `src/lib/social/page-reads.ts`
+  (which account the address names and the unknown-account warning, the Inbox reads and the truncation flag, and
+  whether a failed panel read is shown or rethrown). The JSX around it is not: the pages read GeekAPI through the
+  session cookie, so they only run inside a real request.
 - The Meta connect and callback round trip against Meta.
 
-Left in place on purpose, undecided: the `/api/social/[...path]` proxy, `proxy-path.ts` and the browser
-exports in `src/services/social-api.ts`. No screen uses them now; only the draft and comment test actions
-(`proxyDraftActions`, `proxyCommentActions`) do. Removing them shrinks what the browser can reach but means
-rewriting those tests onto a fake transport.
-
-Known and unchanged: `DraftCard` can show the same refusal twice (violations panel plus error note).
+Removed on 2026-11-17: the `/api/social/[...path]` proxy route, `proxy-path.ts`, the browser exports in
+`src/services/social-api.ts` and the `proxyDraftActions` / `proxyCommentActions` adapters. Nothing in the browser
+can reach GeekAPI's social routes now; only the server does. The draft and social-api tests run over a fake
+transport (`src/test/fake-api.ts`) instead of a stubbed `fetch`.
 
 ## Verified on 2026-11-16 (sign-in)
 
@@ -73,7 +73,7 @@ The checks on that code:
 Every page in the README table exists: Inbox (`/`), `/comments`, `/accounts`,
 `/connect/meta/callback`, `/posts`, `/activity`, plus GeekOAuth sign-in as a confidential BFF client (PKCE, state and nonce, ID token
 verified against the JWKS, encrypted httpOnly session cookie, sign-up through `/Account/Register`),
-the `/api/social/[...path]` Bearer proxy, and live updates (the server holds the SignalR connection
+and live updates (the server holds the SignalR connection
 and streams it to the browser over Server-Sent Events) with a banner when the connection is down.
 
 ## What has not been done or checked
@@ -102,11 +102,13 @@ and streams it to the browser over Server-Sent Events) with a banner when the co
   `actions` prop and a thin wrapper binds the real Server Actions (tests cannot import server-action
   modules: env validation throws). Covered: `DraftCard`, `InboxView`, `CommentsView`, `AccountsView`,
   `PostWriter`, `StatusView` with `LiveRefresh` and `ReloadButton`, `MetaCallbackView`, `Time`,
-  `SocialHubProvider`, `useServerRefresh` (idle path), `ActionResult`. Not covered: the server pages,
+  `SocialHubProvider`, `useServerRefresh` (idle path and the coalescing of a burst), `ActionResult`, `page-reads`. Not covered: the server pages,
   `AppNavbar` and the UI primitives.
-- **CI is written but unproven.** `.github/workflows/ci.yml` runs typecheck, lint, tests and the build
-  on every push and pull request. Its steps were run from a clean install locally; it has not yet
-  run on GitHub.
+- **CI has run on GitHub, and the build step flaked.** `.github/workflows/ci.yml` runs typecheck, lint,
+  tests and the build on every push and pull request. On 2026-11-16 two of five runs failed in
+  `next build` with "An error occurred in `next/font`" while fetching Fraunces from Google Fonts. The
+  fonts are now served from the `@fontsource-variable` packages through `next/font/local`, so the build
+  makes no font request. Not yet confirmed on GitHub: that needs a push and a green run.
 - **Facebook Pages only.** Other platforms are connectors in GeekAPI, not work in this repo; the
   screen is platform-neutral.
 
@@ -134,7 +136,7 @@ come over the one stream from `/api/live-updates`; after every connect and recon
 re-reads what it shows through REST.
 Do not work around these; change the design instead.
 
-Failures are shown, not swallowed: the proxy returns the upstream status and message (plain text is
+Failures are shown, not swallowed: a refusal carries GeekAPI's own status, code and message (plain text is
 displayed as it came), and a refused token is never replaced with another credential.
 
 ## Next steps, in order
@@ -147,6 +149,5 @@ displayed as it came), and a refused token is never replaced with another creden
 3. Connect a Page on `/accounts`, read `/activity`, comment on a post, watch the draft arrive over
    SignalR, edit and approve it. Leave auto-send off until several drafts have been reviewed.
 4. Remove `geek-social.vercel.app` from the Meta app console (`AUDIT.md` finding 1).
-5. Decide whether to remove the unused browser proxy path (see above).
-6. Later gates: image storage (7c), connectors one platform at a time, the 30-day retention purge,
+5. Later gates: image storage (7c), connectors one platform at a time, the 30-day retention purge,
    and the confirmed-email onboarding check, auto-send removal and 403 handling from 7b.

@@ -3,7 +3,7 @@ import { SocialApiError } from "@/services/social-api";
 /**
  * What a Server Action hands back. A thrown error does not cross from the server to the browser intact (in production
  * its message is replaced), so a failure travels as data carrying GeekAPI's own sentence, status, code and the
- * Reviewer's broken rules, and the browser raises the same SocialApiError the proxy path raised.
+ * Reviewer's broken rules, and the browser raises the SocialApiError the server's call raised.
  */
 export type ActionResult<T> =
   | { ok: true; value: T }

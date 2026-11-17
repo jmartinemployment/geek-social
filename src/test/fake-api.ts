@@ -1,7 +1,11 @@
+import { draftApi, readAnswer, type Transport } from "@/services/social-api";
+import type { DraftActions } from "@/services/draft-actions";
+
 /**
- * A stand-in for this app's /api/social proxy: the test says what each route answers, and every call
- * is recorded. A call to a route the test did not describe throws, so a component that makes a request
- * the test did not expect fails loudly instead of getting an empty answer.
+ * A stand-in for GeekAPI's social routes, as a Transport: the test says what each route answers, and every call is
+ * recorded. A call to a route the test did not describe throws, so a component that makes a request the test did not
+ * expect fails loudly instead of getting an empty answer. Answers are real Responses read by the app's own
+ * `readAnswer`, so a refusal reaches the component the way GeekAPI's would.
  */
 
 export interface RecordedCall {
@@ -13,10 +17,10 @@ export interface RecordedCall {
 export type Answer = Response | ((call: RecordedCall) => Response | Promise<Response>);
 
 export interface FakeApi {
+  transport: Transport;
   calls: RecordedCall[];
   /** The calls to one route, in order. */
   to(method: string, path: string): RecordedCall[];
-  restore(): void;
 }
 
 export function json(body: unknown, status = 200): Response {
@@ -24,30 +28,26 @@ export function json(body: unknown, status = 200): Response {
 }
 
 /** Routes are written "METHOD /path", with the path after /api/social, query string included. */
-export function installFakeApi(routes: Record<string, Answer>): FakeApi {
-  const realFetch = globalThis.fetch;
+export function fakeApi(routes: Record<string, Answer>): FakeApi {
   const calls: RecordedCall[] = [];
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, "http://localhost:3006");
-    const path = url.pathname.replace(/^\/api\/social/, "") + url.search;
-    const method = (init?.method ?? "GET").toUpperCase();
-    const call: RecordedCall = {
-      method,
-      path,
-      body: typeof init?.body === "string" ? JSON.parse(init.body) : (init?.body ?? null),
-    };
+  const transport: Transport = async <T,>(method: "GET" | "POST" | "PUT", path: string, payload?: unknown) => {
+    const call: RecordedCall = { method, path, body: payload ?? null };
     calls.push(call);
     const answer = routes[`${method} ${path}`];
     if (!answer) throw new Error(`The test did not describe ${method} ${path}`);
     // Each answer is built fresh: a Response body can be read only once.
     const response = typeof answer === "function" ? await answer(call) : answer.clone();
-    return response;
-  }) as typeof fetch;
+    return readAnswer<T>(response);
+  };
   return {
+    transport,
     calls,
     to: (method, path) => calls.filter((c) => c.method === method && c.path === path),
-    restore: () => {
-      globalThis.fetch = realFetch;
-    },
   };
+}
+
+/** What a draft card does, over a fake API. */
+export function draftActionsOver(transport: Transport): DraftActions {
+  const api = draftApi(transport);
+  return { saveText: api.saveText, approve: api.approve, send: api.send, reject: api.reject, read: api.get };
 }

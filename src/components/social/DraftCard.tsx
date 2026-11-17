@@ -42,6 +42,15 @@ const CATEGORY_TONE: Record<string, "neutral" | "good" | "warn" | "bad" | "brand
 type Busy = "save" | "approve" | "send" | "reject" | null;
 
 /**
+ * The rules the Reviewer named when it refused a text, or none. A refusal with rules is shown by the
+ * rules panel alone: the sentence GeekAPI sent with it says the same thing, and showing both put the
+ * refusal on the card twice. A refusal with no rules has no panel, so it falls through to the error note.
+ */
+function refusedRules(err: unknown): string[] {
+  return err instanceof SocialApiError && err.code === "review_refused" ? err.violations : [];
+}
+
+/**
  * One reply draft and what can be done with it.
  *
  * The edit box is saved only by its Save button: nothing here saves on typing, on blur or in the
@@ -89,10 +98,9 @@ export function DraftCard({
     try {
       saved = await actions.saveText(draft.id, editText);
     } catch (err) {
-      if (err instanceof SocialApiError && err.code === "review_refused") {
-        setViolations(err.violations);
-      }
-      setError(errorText(err));
+      const rules = refusedRules(err);
+      setViolations(rules);
+      if (rules.length === 0) setError(errorText(err));
       setBusy(null);
       return;
     }
@@ -111,10 +119,9 @@ export function DraftCard({
       setOutcome(result.send);
       onChanged(result.draft);
     } catch (err) {
-      if (err instanceof SocialApiError && err.code === "review_refused") {
-        setViolations(err.violations);
-      }
-      setError(errorText(err));
+      const rules = refusedRules(err);
+      setViolations(rules);
+      if (rules.length === 0) setError(errorText(err));
       // Approve sends at once. If the answer was lost or unreadable the reply may be out, so the
       // card shows what the server holds instead of a draft that still looks pending.
       if (mayHaveHappened(err)) await readBack(errorText(err));

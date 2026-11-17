@@ -71,7 +71,6 @@ export const config = {
     "/activity/:path*",
     "/connect/:path*",
     "/welcome/:path*",
-    "/api/social/:path*",
     "/api/live-updates",
   ],
 };

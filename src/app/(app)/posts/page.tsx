@@ -4,9 +4,10 @@ import { UrlAccountFilter } from "@/components/UrlAccountFilter";
 import { Time } from "@/components/Time";
 import { ErrorNote, Loading, Notice, PageFrame, Panel } from "@/components/ui";
 import { readAccounts, serverTransport } from "@/lib/server/social-api";
+import { readOrRefusal, resolveChosenAccount } from "@/lib/social/page-reads";
 import type { SocialAccount } from "@/lib/social/types";
 import { platformWords } from "@/lib/social/words";
-import { LIST_LIMIT, SocialApiError, postApi } from "@/services/social-api";
+import { LIST_LIMIT, postApi } from "@/services/social-api";
 
 /**
  * Publish a link post. The writer is the interactive part; the published list is read on the server for the account in
@@ -16,8 +17,7 @@ import { LIST_LIMIT, SocialApiError, postApi } from "@/services/social-api";
 export default async function PostsPage({ searchParams }: { searchParams: Promise<{ account?: string }> }) {
   const params = await searchParams;
   const accounts = await readAccounts();
-  const requested = params.account ?? null;
-  const chosen = accounts.find((a) => a.id === requested) ?? accounts[0] ?? null;
+  const { chosen, unknown } = resolveChosenAccount(accounts, params.account ?? null);
 
   return (
     <PageFrame
@@ -27,7 +27,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
       <AppPostWriter accounts={accounts} />
 
       <Panel title="Published posts" aside={chosen ? <UrlAccountFilter accounts={accounts} value={chosen.id} allowAll={false} /> : null}>
-        {requested && !accounts.some((a) => a.id === requested) && chosen ? (
+        {unknown && chosen ? (
           <div className="mb-4">
             <Notice tone="warn">The account in the address is not one of yours, so {chosen.displayName} is shown.</Notice>
           </div>
@@ -45,14 +45,10 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
 }
 
 async function PublishedPosts({ accountId, accounts }: { accountId: string; accounts: SocialAccount[] }) {
-  let posts;
-  try {
-    posts = await postApi(serverTransport).list(accountId);
-  } catch (err) {
-    // GeekAPI's own refusal is shown where the list would be. Anything else is a bug and reaches the error page.
-    if (!(err instanceof SocialApiError)) throw err;
-    return <ErrorNote message={`Posts did not load: ${err.message}`} />;
-  }
+  // GeekAPI's own refusal is shown where the list would be. Anything else is a bug and reaches the error page.
+  const read = await readOrRefusal(() => postApi(serverTransport).list(accountId));
+  if (!read.ok) return <ErrorNote message={`Posts did not load: ${read.message}`} />;
+  const posts = read.value;
 
   return (
     <div className="flex flex-col gap-3">

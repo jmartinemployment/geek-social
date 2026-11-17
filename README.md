@@ -43,8 +43,9 @@ Every code and Reviewer rule is put into plain words in one place, `src/lib/soci
   share one refresh. GeekOAuth refusing the refresh token (`invalid_grant`) ends the session; any
   other failure (GeekOAuth unreachable) does not, and is reported to the person. `src/lib/dal.ts`
   `verifySession()` re-checks the session wherever a Server Component reads data.
-- **REST:** the browser calls `/api/social/<path>` on this app, which forwards to
-  `<GeekAPI>/api/social/<path>` with the signed-in person's Bearer token. Scopes asked for:
+- **REST:** the browser never calls GeekAPI. Server Components and Server Actions call
+  `<GeekAPI>/api/social/<path>` with the signed-in person's Bearer token from the session cookie.
+  There is no REST proxy route. Scopes asked for:
   `openid profile email roles offline_access geeksocial.manage`.
 - **Live updates:** the server holds the SignalR connection to `<GeekAPI>/hubs/social-realtime`
   (WebSockets, token in the Authorization header) and forwards each message down a Server-Sent
@@ -83,7 +84,7 @@ or malformed one stops the start or the build and names the variable; values are
 | `OAUTH_REDIRECT_URI` | This app's callback: `<origin>/api/auth/callback`. Must equal a redirect URI registered on the client. The origin also builds the post-logout address `<origin>/signed-out`. |
 | `SESSION_SECRET` | At least 32 characters; the key for the session and sign-in cookies. Changing it signs everyone out. |
 
-`NEXT_PUBLIC_GEEK_API_URL` (optional) is GeekAPI's base URL, the REST proxy target and the hub host.
+`NEXT_PUBLIC_GEEK_API_URL` (optional) is GeekAPI's base URL, the target of the server's REST calls and the hub host.
 Default `https://api.geekatyourspot.com`.
 
 Generate a secret with `openssl rand -base64 32`. See `.env.example`; copy it to `.env.local` for
@@ -103,8 +104,8 @@ Meta app, Valid OAuth Redirect URIs: `<origin>/connect/meta/callback` for each o
 address is taken from the origin the browser is on, so the connect returns to the same signed-in
 session.
 
-The browser no longer calls GeekAPI directly (REST goes through `/api/social`, live updates through
-`/api/live-updates`), so GeekAPI's CORS list no longer needs this app's origins.
+The browser does not call GeekAPI at all (pages and changes go through the server, live updates through
+`/api/live-updates`), so GeekAPI's CORS list does not need this app's origins.
 
 Do not register `https://geek-social.vercel.app`: that host is not this project's (this project's
 Vercel addresses are `geek-social-coral.vercel.app` and the production host), so a redirect there

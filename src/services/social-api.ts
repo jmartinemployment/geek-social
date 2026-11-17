@@ -1,6 +1,7 @@
 /**
- * GeekAPI's GeekSocial routes (api/social/*), reached through this app's same-origin proxy at
- * /api/social, which forwards the signed-in person's Bearer token.
+ * GeekAPI's GeekSocial routes (api/social/*). Each call is made over a `Transport`; the server's is in
+ * `@/lib/server/social-api` and sends the signed-in person's Bearer token from the session cookie. The browser makes
+ * none of these calls: nothing here reaches GeekAPI from client code.
  */
 
 import type {
@@ -25,8 +26,6 @@ import type {
   StoredPost,
 } from "@/lib/social/types";
 
-const API_BASE = "/api/social";
-
 /** The largest page any list route gives (contract: limit is 1 to 200). */
 export const LIST_LIMIT = 200;
 
@@ -49,8 +48,7 @@ export class SocialApiError extends Error {
 /**
  * Reads a refused response into an error carrying GeekAPI's own sentence, code and violations.
  *
- * GeekAPI answers every failure with `{ error, code }` (and `violations` on review_refused). The
- * proxy answers 401 with `{ error }` and an unreachable GeekAPI with plain text. A 403 from the
+ * GeekAPI answers every failure with `{ error, code }` (and `violations` on review_refused). A 403 from the
  * scope policy may come with no body at all, so it is named for what it means here.
  */
 export function refusalFrom(status: number, statusText: string, body: string): SocialApiError {
@@ -92,28 +90,8 @@ export function refusalFrom(status: number, statusText: string, body: string): S
   return new SocialApiError(`GeekAPI answered ${status}: ${text}`, status, null, []);
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      cache: "no-store",
-      headers: {
-        ...(init?.body ? { "Content-Type": "application/json" } : {}),
-        ...init?.headers,
-      },
-    });
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    throw new SocialApiError(`Could not reach this app's server: ${detail}`, 0, null, []);
-  }
-
-  return readAnswer<T>(response);
-}
-
 /**
- * Reads GeekAPI's answer into the value it promises, or into the error that names what went wrong. Shared by the
- * browser's calls through the proxy and the server's direct calls, so both refuse the same answers the same way.
+ * Reads GeekAPI's answer into the value it promises, or into the error that names what went wrong.
  */
 export async function readAnswer<T>(response: Response): Promise<T> {
   const body = await response.text();
@@ -140,14 +118,6 @@ export async function readAnswer<T>(response: Response): Promise<T> {
   }
 }
 
-/** POST/PUT with a JSON body. */
-function send<T>(method: "POST" | "PUT", path: string, payload?: unknown): Promise<T> {
-  return request<T>(path, {
-    method,
-    body: JSON.stringify(payload ?? {}),
-  });
-}
-
 function query(params: Record<string, string | number | null | undefined>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -161,7 +131,7 @@ const id = (value: string) => encodeURIComponent(value);
 
 // Accounts
 
-/** The account calls over one transport, so the browser and the server make them the same way. */
+/** The account calls over one transport. */
 export function accountApi(call: Transport) {
   return {
     list: () => call<SocialAccount[]>("GET", "/accounts"),
@@ -175,15 +145,10 @@ export function accountApi(call: Transport) {
   };
 }
 
-// The browser's own calls, through the proxy, are defined after the transport below.
-
 // Inbox
 
-/** How a call reaches GeekAPI: from the browser through the proxy, or from the server directly. Paths follow /api/social. */
+/** How a call reaches GeekAPI. Paths follow /api/social. */
 export type Transport = <T>(method: "GET" | "POST" | "PUT", path: string, payload?: unknown) => Promise<T>;
-
-const browserTransport: Transport = (method, path, payload) =>
-  method === "GET" ? request(path) : send(method, path, payload);
 
 /**
  * A draft action whose answer does not carry what the screen acts on is refused by name. The action
@@ -211,7 +176,7 @@ function isDraft(value: unknown): value is ReplyDraft {
   return typeof fields.id === "string" && typeof fields.status === "string";
 }
 
-/** The reply-draft calls over one transport, so the browser and the server make them, and refuse bad answers, the same way. */
+/** The reply-draft calls over one transport, refusing answers that lack what the screen acts on. */
 export function draftApi(call: Transport) {
   return {
     list: (status: DraftStatus, accountId: string | null) =>
@@ -241,24 +206,9 @@ export function draftApi(call: Transport) {
   };
 }
 
-const browserAccounts = accountApi(browserTransport);
-export const listAccounts = browserAccounts.list;
-export const saveAccountSettings = browserAccounts.saveSettings;
-export const resyncAccount = browserAccounts.resync;
-export const startMetaConnect = browserAccounts.startMetaConnect;
-export const completeMetaConnect = browserAccounts.completeMetaConnect;
-
-const browserDrafts = draftApi(browserTransport);
-export const listDrafts = browserDrafts.list;
-export const getDraft = browserDrafts.get;
-export const saveDraftText = browserDrafts.saveText;
-export const approveDraft = browserDrafts.approve;
-export const sendDraft = browserDrafts.send;
-export const rejectDraft = browserDrafts.reject;
-
 // Comments
 
-/** The comment calls over one transport, so the browser and the server make them the same way. */
+/** The comment calls over one transport. */
 export function commentApi(call: Transport) {
   return {
     list: (state: CommentState, accountId: string | null) =>
@@ -268,14 +218,9 @@ export function commentApi(call: Transport) {
   };
 }
 
-const browserComments = commentApi(browserTransport);
-export const listComments = browserComments.list;
-export const rerunComment = browserComments.rerun;
-export const likeComment = browserComments.like;
-
 // Posts
 
-/** The post calls over one transport, so the browser and the server make them the same way. */
+/** The post calls over one transport. */
 export function postApi(call: Transport) {
   return {
     /** GeekAPI refuses this route without an account (400 "accountId is required"), so one is required here. */
@@ -285,14 +230,9 @@ export function postApi(call: Transport) {
   };
 }
 
-const browserPosts = postApi(browserTransport);
-export const listPosts = browserPosts.list;
-export const suggestPostCopy = browserPosts.suggestCopy;
-export const publishPost = browserPosts.publish;
-
 // Status and audit
 
-/** The status call over one transport, so the browser and the server make it the same way. */
+/** The status call over one transport. */
 export function statusApi(call: Transport) {
   return { get: () => call<SocialStatus>("GET", "/status") };
 }
@@ -300,8 +240,5 @@ export function statusApi(call: Transport) {
 export function auditApi(call: Transport) {
   return { list: (accountId: string | null) => call<AuditRow[]>("GET", `/audit${query({ accountId, limit: LIST_LIMIT })}`) };
 }
-
-export const getStatus = statusApi(browserTransport).get;
-export const listAudit = auditApi(browserTransport).list;
 
 export { errorText } from "@/lib/errors";
