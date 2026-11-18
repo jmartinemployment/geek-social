@@ -1,28 +1,40 @@
 import { Time } from "@/components/Time";
 import { Notice } from "@/components/ui";
-import type { OrchestratorStatus, SocialStatus } from "@/lib/social/types";
-import { failureWords, platformWords } from "@/lib/social/words";
+import type { CommentCounts, DraftCounts, SocialStatus } from "@/lib/social/types";
+import { draftStatusWords, failureWords, platformWords, triageWords } from "@/lib/social/words";
 
-const COUNTS: { key: Exclude<keyof OrchestratorStatus, "recoveredAt" | "failures">; label: string }[] = [
-  { key: "eventsTakenIn", label: "Comments taken in" },
-  { key: "commentsReplyNeeded", label: "Needed a reply" },
-  { key: "commentsNoReplyNeeded", label: "Needed no reply" },
-  { key: "commentsBlockedNoClearance", label: "Held: platform not cleared" },
-  { key: "commentsFailed", label: "Triage failed" },
-  { key: "draftsPending", label: "Drafts made, waiting for a decision" },
-  { key: "draftsForAPerson", label: "Drafts left for a person to write" },
-  { key: "draftsRefused", label: "Drafts the Reviewer refused" },
-  { key: "draftsSent", label: "Replies sent" },
-  { key: "draftsSendFailed", label: "Sends failed" },
-  { key: "sendsHeld", label: "Sends held back by a limit" },
-  { key: "eventsRecoveredAtStartup", label: "Comments picked up at startup" },
-  { key: "interruptedSendsFailed", label: "Sends cut off by a restart, marked failed" },
-  { key: "eventsScrubbed", label: "Comments whose text was removed after retention" },
+// Labelled with the same words the Comments and Inbox pages use for each outcome and status.
+const COMMENT_COUNTS: { key: keyof CommentCounts; outcome: string }[] = [
+  { key: "undecided", outcome: "untriaged" },
+  { key: "replyNeeded", outcome: "reply_needed" },
+  { key: "noReplyNeeded", outcome: "no_reply_needed" },
+  { key: "blockedNoClearance", outcome: "blocked_no_clearance" },
+  { key: "failed", outcome: "failed" },
 ];
 
-/** The orchestrator's counts and failures, the AI provider and its clearance, Meta settings and send limits. Pure display. */
+const DRAFT_COUNTS: (keyof DraftCounts)[] = ["pending", "approved", "sending", "sent", "failed", "rejected"];
+
+function Counts({ title, rows }: { title: string; rows: { key: string; label: string; value: number }[] }) {
+  return (
+    <div>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map(({ key, label, value }) => (
+          <div key={key} className="flex items-baseline justify-between gap-3 border-b border-border py-1">
+            <dt className="text-muted">{label}</dt>
+            <dd className="font-medium text-foreground">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+/**
+ * Your comments and replies by where they stand, the steps that failed in the last 30 days, the AI provider and its
+ * clearance, Meta settings and send limits. Only your own counts and failures, and GeekSocial-wide failures. Pure display.
+ */
 export function StatusView({ status }: { status: SocialStatus }) {
-  const o = status.orchestrator;
   const ai = status.aiProvider;
   return (
     <div className="flex flex-col gap-5">
@@ -93,36 +105,28 @@ export function StatusView({ status }: { status: SocialStatus }) {
         </Notice>
       ) : null}
 
-      <div>
-        <p className="text-sm font-semibold text-foreground">Orchestrator</p>
-        <p className="text-xs text-muted">
-          {o.recoveredAt ? (
-            <>
-              Counts since it started and recovered, <Time value={o.recoveredAt} />.
-            </>
-          ) : (
-            "It has not finished recovering since GeekAPI started."
-          )}
-        </p>
-        <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
-          {COUNTS.map(({ key, label }) => (
-            <div key={key} className="flex items-baseline justify-between gap-3 border-b border-border py-1">
-              <dt className="text-muted">{label}</dt>
-              <dd className="font-medium text-foreground">{o[key]}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
+      <Counts
+        title="Your comments"
+        rows={COMMENT_COUNTS.map(({ key, outcome }) => ({ key, label: triageWords(outcome), value: status.comments[key] }))}
+      />
+      <Counts
+        title="Your reply drafts"
+        rows={DRAFT_COUNTS.map((key) => ({ key, label: draftStatusWords(key), value: status.drafts[key] }))}
+      />
 
       <div>
-        <p className="text-sm font-semibold text-foreground">Recent orchestrator failures</p>
-        {o.failures.length === 0 ? (
+        <p className="text-sm font-semibold text-foreground">Failures in the last 30 days</p>
+        {status.failures.length === 0 ? (
           <p className="mt-1 text-sm text-muted">None.</p>
         ) : (
           <ul className="mt-2 flex flex-col gap-2">
-            {o.failures.map((f, i) => (
+            {status.failures.map((f, i) => (
               <li key={`${f.at}-${i}`} className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                <span className="font-semibold"><Time value={f.at} />, {f.step}:</span> {failureWords(f.code)}
+                <span className="font-semibold">
+                  <Time value={f.at} />, {f.step}
+                  {f.forEveryTenant ? " (GeekSocial-wide)" : null}:
+                </span>{" "}
+                {failureWords(f.code)}
               </li>
             ))}
           </ul>

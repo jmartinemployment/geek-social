@@ -12,7 +12,7 @@ import { auditActionWords, auditOutcomeWords, failureWords, platformWords } from
 import { LIST_LIMIT, auditApi, statusApi } from "@/services/social-api";
 
 /**
- * What GeekSocial is doing: the orchestrator's counts and failures, clearance, and the audit trail. Nothing here changes
+ * What GeekSocial is doing for this tenant: its counts and failures, clearance, and the audit trail. Nothing here changes
  * anything, so it is all read on the server. The two panels read independently, so one failing does not hide the other,
  * and a failure is said in the panel it belongs to. The account filter is in the address (`?account=`). A live message
  * makes the server read both again.

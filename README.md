@@ -37,7 +37,7 @@ The contract it is built against is `GeekBackend/docs/GEEK-SOCIAL-API.md`.
 | `/accounts` | Connect a Facebook Page, Pause sends (saved only by Save), Resync. There is no auto-send: a person approves every reply. |
 | `/connect/meta/callback` | Where Meta returns after a connect; completes it with GeekAPI. |
 | `/posts` | Suggest copy, edit, Publish a link post; the published posts. |
-| `/activity` | Status (clearance, Meta settings, send limits, orchestrator counts and failures) and the audit. |
+| `/activity` | Status (your comment and draft counts, failures of the last 30 days, the AI provider and its clearance, Meta settings, send limits) and the audit. Only your own counts and failures, plus GeekSocial-wide failures. |
 
 Every code and Reviewer rule is put into plain words in one place, `src/lib/social/words.ts`.
 

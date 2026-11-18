@@ -6,7 +6,7 @@ import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared
 import { SocialHubProvider } from "@/components/SocialHubProvider";
 import { LiveRefresh, ReloadButton } from "@/components/social/LiveRefresh";
 import { StatusView } from "@/components/social/StatusView";
-import type { OrchestratorStatus, SocialStatus } from "@/lib/social/types";
+import type { SocialStatus } from "@/lib/social/types";
 import { FakeEventSource, installFakeEventSource } from "@/test/fake-event-source";
 
 let refreshes: number;
@@ -22,28 +22,10 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-const orchestrator = (overrides: Partial<OrchestratorStatus> = {}): OrchestratorStatus => ({
-  recoveredAt: "2026-11-16T12:00:00Z",
-  eventsRecoveredAtStartup: 0,
-  interruptedSendsFailed: 0,
-  eventsScrubbed: 0,
-  eventsTakenIn: 12,
-  commentsReplyNeeded: 7,
-  commentsNoReplyNeeded: 3,
-  commentsBlockedNoClearance: 0,
-  commentsFailed: 2,
-  draftsPending: 4,
-  draftsForAPerson: 1,
-  draftsRefused: 0,
-  draftsSent: 5,
-  draftsSendFailed: 1,
-  sendsHeld: 0,
-  failures: [],
-  ...overrides,
-});
-
 const status = (overrides: Partial<SocialStatus> = {}): SocialStatus => ({
-  orchestrator: orchestrator(),
+  comments: { undecided: 1, replyNeeded: 7, noReplyNeeded: 3, blockedNoClearance: 0, failed: 2 },
+  drafts: { pending: 4, approved: 0, sending: 0, sent: 5, failed: 1, rejected: 0 },
+  failures: [],
   aiProvider: { id: "openai", name: "OpenAI", model: "gpt-test", apiKeySet: true },
   clearedPlatforms: ["facebook"],
   metaConfigured: true,
@@ -61,8 +43,6 @@ test("it shows the AI provider and what is cleared for it, the Meta settings, th
   assert.equal(screen.queryByText(/No key set|No model set|No AI provider/), null);
   screen.getByText("Set on GeekAPI");
   screen.getByText(/30 replies per account per hour; a 5 minute cool-down/);
-  screen.getByText("Comments taken in");
-  screen.getByText("12");
   screen.getByText("None.");
   assert.equal(screen.queryByText(/No platform is cleared/), null);
 });
@@ -98,19 +78,37 @@ test("a provider with no model or no key says which is missing and that every ca
   assert.equal(screen.queryByText("No model set"), null);
 });
 
-test("orchestrator failures are listed with when, which step and what it means", () => {
+test("the counts are this tenant's, labelled with the words the other pages use", () => {
+  render(<StatusView status={status()} />);
+  screen.getByText("Your comments");
+  screen.getByText("Your reply drafts");
+  const row = (label: string) => screen.getByText(label).parentElement!.querySelector("dd")!.textContent;
+  assert.equal(row("Waiting for Triage"), "1");
+  assert.equal(row("Needs a reply"), "7");
+  assert.equal(row("Triage failed"), "2");
+  assert.equal(row("Waiting for a decision"), "4");
+  assert.equal(row("Sent"), "5");
+  assert.equal(row("Send failed"), "1");
+  assert.equal(screen.queryByText(/Orchestrator|since it started|recovering/), null, "nothing process-wide or reset by a restart");
+});
+
+test("failures are listed with when, which step and what it means, and a GeekSocial-wide one says so", () => {
   render(
     <StatusView
-      status={status({ orchestrator: orchestrator({ failures: [{ step: "triage", code: "triage_failed", at: "2026-11-16T12:05:00Z" }] }) })}
+      status={status({
+        failures: [
+          { step: "load the account", code: "store_unavailable", at: "2026-11-16T12:05:00Z", forEveryTenant: false },
+          { step: "recover at startup", code: "unexpected_error", at: "2026-11-16T12:00:00Z", forEveryTenant: true },
+        ],
+      })}
     />,
   );
   assert.equal(screen.queryByText("None."), null);
-  screen.getByText(/triage:/);
-});
-
-test("an orchestrator that has not finished recovering says so instead of showing a date", () => {
-  render(<StatusView status={status({ orchestrator: orchestrator({ recoveredAt: null }) })} />);
-  screen.getByText("It has not finished recovering since GeekAPI started.");
+  screen.getByText(/load the account:/);
+  screen.getByText(/GeekSocial's store could not be reached/);
+  screen.getByText(/recover at startup \(GeekSocial-wide\):/);
+  screen.getByText(/An unexpected error stopped this step/);
+  assert.equal(screen.queryByText(/load the account \(GeekSocial-wide\)/), null);
 });
 
 test("LiveRefresh makes the server read again on the messages it is given, on a reconnect, and on nothing else", () => {

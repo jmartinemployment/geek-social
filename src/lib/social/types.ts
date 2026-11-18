@@ -172,29 +172,34 @@ export interface AuditRow {
   occurredAt: string;
 }
 
-export interface OrchestratorFailure {
+/** The tenant's comments, by what triage decided. `undecided` comments are waiting for it. */
+export interface CommentCounts {
+  undecided: number;
+  replyNeeded: number;
+  noReplyNeeded: number;
+  blockedNoClearance: number;
+  failed: number;
+}
+
+/** The tenant's reply drafts, by status. */
+export interface DraftCounts {
+  pending: number;
+  approved: number;
+  sending: number;
+  sent: number;
+  failed: number;
+  rejected: number;
+}
+
+/**
+ * A step GeekSocial could not complete, kept 30 days. `forEveryTenant` is a step that belongs to no one tenant (startup
+ * recovery, the retention purge); every tenant sees those.
+ */
+export interface StepFailure {
   step: string;
   code: string;
   at: string;
-}
-
-export interface OrchestratorStatus {
-  recoveredAt: string | null;
-  eventsRecoveredAtStartup: number;
-  interruptedSendsFailed: number;
-  eventsScrubbed: number;
-  eventsTakenIn: number;
-  commentsReplyNeeded: number;
-  commentsNoReplyNeeded: number;
-  commentsBlockedNoClearance: number;
-  commentsFailed: number;
-  draftsPending: number;
-  draftsForAPerson: number;
-  draftsRefused: number;
-  draftsSent: number;
-  draftsSendFailed: number;
-  sendsHeld: number;
-  failures: OrchestratorFailure[];
+  forEveryTenant: boolean;
 }
 
 /** The AI provider GeekAPI is set to call. The key itself is never sent, only whether it is set. */
@@ -206,8 +211,12 @@ export interface AiProviderStatus {
   apiKeySet: boolean;
 }
 
+/** The signed-in person's tenant's status: only its own counts, and its own failures plus GeekSocial-wide ones. */
 export interface SocialStatus {
-  orchestrator: OrchestratorStatus;
+  comments: CommentCounts;
+  drafts: DraftCounts;
+  /** Newest first, at most 50. */
+  failures: StepFailure[];
   /** Null when no AI provider is set on GeekAPI. */
   aiProvider: AiProviderStatus | null;
   /** The platforms cleared to send comment text to that provider; empty when none is set. */

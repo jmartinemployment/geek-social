@@ -102,6 +102,8 @@ Checked by: a `node` URL test of the same construction.
 
 - `OrchestratorStatus` in `src/lib/social/types.ts` lacks `draftsAutoApproved` and `sendsHeld`,
   which `docs/GEEK-SOCIAL-API.md` lists, so the Activity page cannot show held sends.
+  **Moot since 2026-11-18:** the in-memory orchestrator status is gone; status is per tenant, read from
+  GeekRepository, with approved (held) drafts counted (roadmap Phase 0, item 3).
 - The comments on `saveDraftText`, `rejectDraft` and `sendDraft` say the contract does not state
   their answers. It does: the draft view, the draft view, and `{ draft, send }`.
 - `sendDraft` also accepts a bare send outcome, which the contract never promises. That is a

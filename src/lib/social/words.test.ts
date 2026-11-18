@@ -7,12 +7,13 @@ import {
   ruleWords,
 } from "@/lib/social/words";
 
-// SocialFailureCodes.All in GeekApplication/Models/Social/SocialPlatforms.cs, plus review_refused.
+// SocialFailureCodes.All in GeekApplication/Models/Social/SocialPlatforms.cs, plus review_refused, and the two codes a kept
+// step failure may also carry (SocialStepFailures in GeekApplication/Models/Social/SocialRecords.cs).
 const FAILURE_CODES = [
   "not_supported", "invalid_request", "token_invalid", "rate_limited", "forbidden", "not_found",
   "platform_rejected", "platform_unavailable", "outcome_unknown", "invalid_signature", "conflict",
   "store_unavailable", "encryption_unavailable", "not_configured", "clearance_required", "model_failed",
-  "review_refused",
+  "review_refused", "unexpected_error", "unknown",
 ];
 
 // ReviewRules.All in GeekApplication/Models/Social/SocialAgents.cs.

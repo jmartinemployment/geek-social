@@ -19,6 +19,8 @@ export const FAILURE_WORDS: Record<string, string> = {
   invalid_signature: "A webhook arrived without a valid signature. Nothing was stored.",
   conflict: "Something changed first: a reply already exists for that comment, or the draft is no longer in the state shown here.",
   store_unavailable: "GeekSocial's store could not be reached or did not finish the write.",
+  unexpected_error: "An unexpected error stopped this step. GeekSocial's logs have the detail.",
+  unknown: "The step failed without saying why.",
   encryption_unavailable: "The key that protects stored account sign-ins is missing or unusable, so no account can be used.",
   not_configured: "A setting GeekSocial needs is not set on GeekAPI (a platform's app settings, or the AI provider, its model or its key), so nothing was called.",
   clearance_required: "This platform is not cleared to send comment text to the AI provider, so nothing was sent. The Activity page shows which provider is set and which platforms are cleared for it.",
