@@ -3,7 +3,7 @@ import { PageFrame } from "@/components/ui";
 import { readAccounts } from "@/lib/server/social-api";
 
 /**
- * Connected accounts, read on the server: connect a Facebook Page, set auto-send and the send pause, and resync. Saving,
+ * Connected accounts, read on the server: connect a Facebook Page, pause or resume its sends, and resync. Saving,
  * resyncing and connecting are Server Actions. A read that fails throws, and the error page says what failed.
  */
 export default async function AccountsPage() {

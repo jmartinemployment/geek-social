@@ -34,7 +34,7 @@ The contract it is built against is `GeekBackend/docs/GEEK-SOCIAL-API.md`.
 |---|---|
 | `/` | Inbox: drafts by tab (Pending, For a person, Refused, Rejected, Approved and held, Sent, Failed). Edit (saved only by Save), Approve and send, Send, Reject. |
 | `/comments` | Comments that did not become a draft: Held, Failed, Waiting, No reply needed. Run again, Like. |
-| `/accounts` | Connect a Facebook Page, auto-send categories (no effect: GeekAPI no longer auto-sends; removed in roadmap Phase 0), Pause sends (saved only by Save), Resync. |
+| `/accounts` | Connect a Facebook Page, Pause sends (saved only by Save), Resync. There is no auto-send: a person approves every reply. |
 | `/connect/meta/callback` | Where Meta returns after a connect; completes it with GeekAPI. |
 | `/posts` | Suggest copy, edit, Publish a link post; the published posts. |
 | `/activity` | Status (clearance, Meta settings, send limits, orchestrator counts and failures) and the audit. |

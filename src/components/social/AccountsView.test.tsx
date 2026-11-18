@@ -61,64 +61,58 @@ test("it shows each account with its platform and status, and says when there ar
   screen.getByText(/No account is connected yet/);
 });
 
-test("Save is off until something changes, and nothing is sent by ticking a box", () => {
+const PAUSE = "Pause every send from this account";
+
+test("Save is off until something changes, and nothing is sent by ticking the box", () => {
   const saved: unknown[] = [];
   mount([account()], { ...unused, save: async (...args) => (saved.push(args), account()) });
   assert.equal(save().disabled, true);
-  fireEvent.click(box("Praise"));
+  fireEvent.click(box(PAUSE));
   assert.equal(save().disabled, false);
   screen.getByText("Unsaved changes");
   assert.equal(saved.length, 0);
 });
 
-test("Save sends exactly the ticked categories and the pause, in the order the screen lists them", async () => {
+test("the pause is the only setting: there is no way to send without approval", () => {
+  mount([account()]);
+  assert.equal(screen.queryByText(/Send without approval/), null);
+  assert.equal(screen.queryAllByRole("checkbox").length, 1);
+  screen.getByText(/not even a reply you approved/);
+});
+
+test("Save sends exactly the pause", async () => {
   const sent: { id: string; settings: AccountSettings }[] = [];
-  mount([account()], { ...unused, save: async (id, settings) => (sent.push({ id, settings }), account({ autoSendCategories: ["question", "praise"] })) });
-  fireEvent.click(box("Praise"));
-  fireEvent.click(box("Question"));
-  fireEvent.click(box("Pause every send from this account"));
+  mount([account()], { ...unused, save: async (id, settings) => (sent.push({ id, settings }), account({ sendsDisabled: true })) });
+  fireEvent.click(box(PAUSE));
   fireEvent.click(save());
   await screen.findByText("Settings saved.");
-  assert.deepEqual(sent, [{ id: "a1", settings: { autoSendCategories: ["question", "praise"], sendsDisabled: true } }]);
-  screen.getByText("Settings saved.");
+  assert.deepEqual(sent, [{ id: "a1", settings: { sendsDisabled: true } }]);
   assert.equal(screen.queryByText("Unsaved changes"), null, "the form is back to what the server holds");
 });
 
 test("a save GeekAPI refuses shows its sentence and keeps what was ticked, so it can be tried again", async () => {
   mount([account()], { ...unused, save: async () => Promise.reject(new SocialApiError("The account is not yours.", 404, "not_found", [])) });
-  fireEvent.click(box("Praise"));
+  fireEvent.click(box(PAUSE));
   fireEvent.click(save());
   await screen.findByText(/Settings were not saved: The account is not yours\./);
-  assert.equal(box("Praise").checked, true, "the person's choice is still there");
+  assert.equal(box(PAUSE).checked, true, "the person's choice is still there");
   screen.getByText("Unsaved changes");
   assert.equal(save().disabled, false);
 });
 
 test("Discard puts the form back to what the server holds", () => {
   mount([account()]);
-  fireEvent.click(box("Praise"));
+  fireEvent.click(box(PAUSE));
   fireEvent.click(screen.getByRole("button", { name: "Discard changes" }));
-  assert.equal(box("Praise").checked, false);
+  assert.equal(box(PAUSE).checked, false);
   assert.equal(screen.queryByText("Unsaved changes"), null);
-});
-
-test("ticking spam warns that a public reply goes out unread", () => {
-  mount([account()]);
-  assert.equal(screen.queryByText(/Spam is ticked/), null);
-  fireEvent.click(box("Spam"));
-  screen.getByText(/Spam is ticked/);
-});
-
-test("a category this screen does not offer is named, and Save says it sends only what is ticked", () => {
-  mount([account({ autoSendCategories: ["praise", "newcategory"] })]);
-  screen.getByText(/GeekAPI also lists newcategory for this account/);
 });
 
 test("an untouched form follows the server's new list, so a change from elsewhere shows", () => {
   const view = mount([account()]);
-  assert.equal(box("Pause every send from this account").checked, false);
+  assert.equal(box(PAUSE).checked, false);
   view.rerender([account({ sendsDisabled: true })]);
-  assert.equal(box("Pause every send from this account").checked, true);
+  assert.equal(box(PAUSE).checked, true);
   screen.getByText("Sends paused");
 });
 

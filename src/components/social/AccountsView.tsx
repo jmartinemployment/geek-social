@@ -14,8 +14,8 @@ import {
   quietButton,
   secondaryButton,
 } from "@/components/ui";
-import { AUTO_SEND_CATEGORIES, type AutoSendCategory, type ResyncResult, type SocialAccount } from "@/lib/social/types";
-import { accountStatusWords, categoryWords, platformWords } from "@/lib/social/words";
+import type { ResyncResult, SocialAccount } from "@/lib/social/types";
+import { accountStatusWords, platformWords } from "@/lib/social/words";
 import type { AccountActions } from "@/services/account-actions";
 import { errorText } from "@/services/social-api";
 
@@ -82,8 +82,8 @@ export function AccountsView({ accounts, actions }: { accounts: SocialAccount[];
   );
 }
 
+/** The account's one setting. There is no auto-send: a person approves every reply. */
 interface SettingsForm {
-  autoSendCategories: AutoSendCategory[];
   sendsDisabled: boolean;
 }
 
@@ -94,20 +94,12 @@ interface SaveState {
 
 type ResyncState = { result: ResyncResult | null; error: string | null };
 
-function isAutoSendCategory(value: string): value is AutoSendCategory {
-  return (AUTO_SEND_CATEGORIES as readonly string[]).includes(value);
-}
-
 function AccountCard({ account, actions }: { account: SocialAccount; actions: AccountActions }) {
   // Null while untouched: the form then shows what the server holds, including a change the live
   // connection just brought in. Once edited, it holds the person's choices until Save or Discard.
   const [edits, setEdits] = useState<SettingsForm | null>(null);
 
-  const serverForm: SettingsForm = {
-    autoSendCategories: account.autoSendCategories.filter(isAutoSendCategory),
-    sendsDisabled: account.sendsDisabled,
-  };
-  const unexpected = account.autoSendCategories.filter((c) => !isAutoSendCategory(c));
+  const serverForm: SettingsForm = { sendsDisabled: account.sendsDisabled };
   const form = edits ?? serverForm;
 
   const [saveState, saveAction, saving] = useActionState(async (): Promise<SaveState> => {
@@ -127,16 +119,6 @@ function AccountCard({ account, actions }: { account: SocialAccount; actions: Ac
       return { result: null, error: `Resync failed: ${errorText(err)}` };
     }
   }, { result: null, error: null });
-
-  function toggleCategory(category: AutoSendCategory) {
-    const has = form.autoSendCategories.includes(category);
-    setEdits({
-      ...form,
-      autoSendCategories: has
-        ? form.autoSendCategories.filter((c) => c !== category)
-        : AUTO_SEND_CATEGORIES.filter((c) => c === category || form.autoSendCategories.includes(c)),
-    });
-  }
 
   return (
     <article className="rounded-lg border border-border bg-background px-4 py-4">
@@ -165,8 +147,8 @@ function AccountCard({ account, actions }: { account: SocialAccount; actions: Ac
 
       {/*
         Submitted by a handler inside a transition, not as the form's action: React resets a form after its action runs,
-        and that reset would undo the ticked boxes after a refused save, leaving the screen showing a box unticked that
-        the next Save would send ticked.
+        and that reset would undo the ticked box after a refused save, leaving the screen showing it unticked when the
+        next Save would send it ticked.
       */}
       <form
         onSubmit={(event) => {
@@ -174,41 +156,7 @@ function AccountCard({ account, actions }: { account: SocialAccount; actions: Ac
           startTransition(() => saveAction());
         }}
       >
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <fieldset>
-            <legend className="text-sm font-semibold text-foreground">Send without approval</legend>
-            <p className="mt-1 text-xs text-muted">
-              Replies in a ticked category go out as soon as the Reviewer passes them. Complaints and sensitive comments
-              always wait for a person.
-            </p>
-            {form.autoSendCategories.includes("spam") ? (
-              <p className="mt-1 text-xs text-red-600">
-                Spam is ticked: every comment sorted as spam gets a public reply with no one reading it first, and that
-                reply can draw more attention to the spam.
-              </p>
-            ) : null}
-            <div className="mt-2 flex flex-wrap gap-4">
-              {AUTO_SEND_CATEGORIES.map((category) => (
-                <label key={category} className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={form.autoSendCategories.includes(category)}
-                    onChange={() => toggleCategory(category)}
-                    disabled={saving}
-                    className={checkboxClass}
-                  />
-                  {categoryWords(category)}
-                </label>
-              ))}
-            </div>
-            {unexpected.length > 0 ? (
-              <p className="mt-2 text-xs text-red-600">
-                GeekAPI also lists {unexpected.join(", ")} for this account, which this screen does not offer. Saving
-                sends only the ticked boxes above.
-              </p>
-            ) : null}
-          </fieldset>
-
+        <div className="mt-4">
           <fieldset>
             <legend className="text-sm font-semibold text-foreground">Pause sends</legend>
             <label className="mt-2 flex items-center gap-2 text-sm text-foreground">
@@ -221,7 +169,9 @@ function AccountCard({ account, actions }: { account: SocialAccount; actions: Ac
               />
               Pause every send from this account
             </label>
-            <p className="mt-1 text-xs text-muted">While paused, nothing is sent from this account, approved or automatic.</p>
+            <p className="mt-1 text-xs text-muted">
+              While paused, nothing is sent from this account, not even a reply you approved.
+            </p>
           </fieldset>
         </div>
 

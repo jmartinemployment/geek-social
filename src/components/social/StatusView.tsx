@@ -12,7 +12,6 @@ const COUNTS: { key: Exclude<keyof OrchestratorStatus, "recoveredAt" | "failures
   { key: "draftsPending", label: "Drafts made, waiting for a decision" },
   { key: "draftsForAPerson", label: "Drafts left for a person to write" },
   { key: "draftsRefused", label: "Drafts the Reviewer refused" },
-  { key: "draftsAutoApproved", label: "Drafts approved by an account's auto-send" },
   { key: "draftsSent", label: "Replies sent" },
   { key: "draftsSendFailed", label: "Sends failed" },
   { key: "sendsHeld", label: "Sends held back by a limit" },

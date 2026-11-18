@@ -108,7 +108,7 @@ Checked by: a `node` URL test of the same construction.
   tolerant second path where the contract says one shape.
 - `AUTO_SEND_CATEGORIES` includes `spam`. The backend only forbids `complaint` and `sensitive`, so
   an account can auto-send replies to spam. Whether that is wanted is a decision for you.
-  **Moot since 2026-11-18:** GeekAPI no longer auto-sends, and roadmap Phase 0 removes the setting.
+  **Moot since 2026-11-18:** auto-send is removed, setting and column included (roadmap Phase 0, item 2).
 
 ### 7. Refresh tokens are rotated while requests run in parallel (low, unverified)
 

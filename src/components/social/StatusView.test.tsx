@@ -35,7 +35,6 @@ const orchestrator = (overrides: Partial<OrchestratorStatus> = {}): Orchestrator
   draftsPending: 4,
   draftsForAPerson: 1,
   draftsRefused: 0,
-  draftsAutoApproved: 0,
   draftsSent: 5,
   draftsSendFailed: 1,
   sendsHeld: 0,

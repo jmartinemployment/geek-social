@@ -165,8 +165,7 @@ displayed as it came), and a refused token is never replaced with another creden
    configuration and webhook, GeekOAuth client redirect URIs (GeekBackend handoff, "Railway variables"
    and "Meta app settings").
 3. Connect a Page on `/accounts`, read `/activity`, comment on a post, watch the draft arrive over
-   SignalR, edit and approve it. GeekAPI no longer auto-sends (GeekBackend `02de4a82`), so the auto-send
-   boxes on `/accounts` have no effect until roadmap Phase 0 removes them.
+   SignalR, edit and approve it. Auto-send is removed (roadmap Phase 0, item 2): a person approves every reply.
 4. Remove `geek-social.vercel.app` from the Meta app console (`AUDIT.md` finding 1).
 5. Later gates: image storage (7c), connectors one platform at a time, the 30-day retention purge,
-   and the confirmed-email onboarding check, auto-send removal and 403 handling from 7b.
+   and the confirmed-email onboarding check and 403 handling from 7b.

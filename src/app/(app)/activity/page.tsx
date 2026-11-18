@@ -99,7 +99,7 @@ async function AuditPanel({ accountId, accounts }: { accountId: string | null; a
           {row.failureCode ? <p className="mt-1 text-red-700">{failureWords(row.failureCode)}</p> : null}
           {row.failureDetail ? <p className="mt-1 text-red-700">{row.failureDetail}</p> : null}
           <p className="mt-1 text-xs text-muted">
-            {row.actorUserId ? `By ${row.actorUserId}` : "By GeekSocial on its own (auto-sent)"}
+            {row.actorUserId ? `By ${row.actorUserId}` : "By GeekSocial, sending a reply you approved after a limit held it back"}
             {row.platformObjectId ? ` · platform id ${row.platformObjectId}` : ""}
             {row.replyDraftId ? ` · draft ${row.replyDraftId}` : ""}
           </p>

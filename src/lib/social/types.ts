@@ -7,10 +7,6 @@ export type Platform = "facebook" | "instagram" | "linkedin_organization" | "lin
 
 export type ReplyCategory = "question" | "praise" | "complaint" | "spam" | "sensitive";
 
-/** The only categories an account may send without approval. Complaint and sensitive never auto-send. */
-export const AUTO_SEND_CATEGORIES = ["question", "praise", "spam"] as const;
-export type AutoSendCategory = (typeof AUTO_SEND_CATEGORIES)[number];
-
 export type AccountStatus = "connected" | "reconnect_required";
 
 /** The signed-in person's tenant: the customer account every GeekSocial account, comment and draft belongs to. */
@@ -29,14 +25,13 @@ export interface SocialAccount {
   platformAccountId: string;
   displayName: string;
   status: AccountStatus;
-  autoSendCategories: string[];
   sendsDisabled: boolean;
   tokenExpiresAt: string | null;
   connectedAt: string;
 }
 
+/** An account's one setting, the send pause. A person approves every reply; there is no auto-send. */
 export interface AccountSettings {
-  autoSendCategories: AutoSendCategory[];
   sendsDisabled: boolean;
 }
 
@@ -196,7 +191,6 @@ export interface OrchestratorStatus {
   draftsPending: number;
   draftsForAPerson: number;
   draftsRefused: number;
-  draftsAutoApproved: number;
   draftsSent: number;
   draftsSendFailed: number;
   sendsHeld: number;

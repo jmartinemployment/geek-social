@@ -34,7 +34,6 @@ export function account(overrides: Partial<SocialAccount> = {}): SocialAccount {
     platformAccountId: "fb-1",
     displayName: "Acme Page",
     status: "connected",
-    autoSendCategories: [],
     sendsDisabled: false,
     tokenExpiresAt: null,
     connectedAt: "2026-11-01T00:00:00Z",
