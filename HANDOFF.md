@@ -66,7 +66,7 @@ can go public:
 - GeekAPI lacks `GEEK_SOCIAL_META_VERIFY_TOKEN` and `GEEK_SOCIAL_META_LOGIN_CONFIG_ID`, so no Page can connect.
   Activity says so.
 - No platform is cleared for OpenAI, so a comment would be held.
-- The Meta app has no Pages use case or test Page yet (`GeekBackend/docs/PLATFORM-CAPABILITIES.md:579-581`).
+- The Meta app has no Pages use case or test Page yet (`GeekBackend/docs/PLATFORM-CAPABILITIES.md:580-582`).
 
 **Feasibility documents (no product code):**
 
@@ -74,9 +74,19 @@ can go public:
 |---|---|---|
 | 8. Platform access register: one row per network, cited | `GeekBackend/docs/PLATFORM-ACCESS-REGISTER.md` | `245cd4d6`, `3c32867e`, `f677585a` |
 | 11. Connector contract, Facebook checked clause by clause | `GeekBackend/docs/SOCIAL-CONNECTOR-CONTRACT.md` | `34bde5cf`, `245cd4d6` |
+| 10. Verified capability matrix, operation by operation, every network | `GeekBackend/docs/PLATFORM-CAPABILITY-MATRIX.md` | `a619b824` |
 | 12. Unit-economics model | `plans/geek-social-unit-economics-2026-11-18.md` | `99818f0` |
 
 What they found that needs a decision:
+- **Meta's permission name.** Meta's Pages guides now name `pages_read_user_engagement` for reading comments.
+  The permissions reference and the connector (`MetaAccountConnector.cs:26`) use `pages_read_user_content`. If
+  the Login for Business configuration offers only the new name, every connect fails, naming the missing
+  permission. Check this when creating the configuration.
+- **Most networks have no native scheduling.** Only Facebook, Google Business Profile and YouTube schedule
+  natively, so GeekSocial's own scheduler is the general path for Phase 2.
+- **Media transport is split.** LinkedIn, X and YouTube take only bytes. Instagram, Nextdoor and TikTok's
+  Business API take only URLs, and TikTok's must be on a verified domain. Phase 2's media design has to serve
+  both.
 - **The configured model shuts down.** OpenAI shuts `gpt-4.1` down on 2027-01-14 and names `gpt-6-luna` as the
   replacement, which costs a twentieth as much. Changing `GEEK_SOCIAL_AI_MODEL` is a Railway change. Run one live
   triage first, to check that its 400-token output limit is enough.
@@ -233,7 +243,8 @@ displayed as it came), and a refused token is never replaced with another creden
 
 1. What the owner does or decides before the walkthrough can go on:
    - In the Meta app, create the Facebook Login for Business configuration and give its id, for
-     `GEEK_SOCIAL_META_LOGIN_CONFIG_ID`.
+     `GEEK_SOCIAL_META_LOGIN_CONFIG_ID`. Note whether it offers `pages_read_user_content` or only
+     `pages_read_user_engagement`.
    - Approve generating `GEEK_SOCIAL_META_VERIFY_TOKEN`; it is set on Railway and entered in the Meta webhook
      settings.
    - Choose the AI provider and model, given `gpt-4.1`'s shutdown, and clear it for Facebook. Either add
