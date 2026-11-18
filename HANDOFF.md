@@ -52,6 +52,49 @@ can go public:
   provider change, and the Facebook menu path for removing the app.
 - The tenant-isolation statement is now backed by items 4 and 7.
 
+## 2026-11-18: Phase 0 walkthrough, part 1, and the feasibility documents
+
+**Walkthrough, signed in on `geek-social.geekatyourspot.com`** (this repo at `a0d6baf`):
+- Live updates connected, with no "Live updates are off" banner.
+- Activity shows this tenant's own counts (item 3's queries work against Railway's Postgres) and names the AI
+  provider as OpenAI, `gpt-4.1`.
+- No auto-send setting appears.
+- `/robots.txt` disallows everything.
+- The post form loads the capability matrix from GeekAPI.
+
+**Not reached:** connecting a Page, a comment arriving, a draft and its approval. Three things block them:
+- GeekAPI lacks `GEEK_SOCIAL_META_VERIFY_TOKEN` and `GEEK_SOCIAL_META_LOGIN_CONFIG_ID`, so no Page can connect.
+  Activity says so.
+- No platform is cleared for OpenAI, so a comment would be held.
+- The Meta app has no Pages use case or test Page yet (`GeekBackend/docs/PLATFORM-CAPABILITIES.md:579-581`).
+
+**Feasibility documents (no product code):**
+
+| Item | Where | Commit |
+|---|---|---|
+| 8. Platform access register: one row per network, cited | `GeekBackend/docs/PLATFORM-ACCESS-REGISTER.md` | `245cd4d6`, `3c32867e`, `f677585a` |
+| 11. Connector contract, Facebook checked clause by clause | `GeekBackend/docs/SOCIAL-CONNECTOR-CONTRACT.md` | `34bde5cf`, `245cd4d6` |
+| 12. Unit-economics model | `plans/geek-social-unit-economics-2026-11-18.md` | `99818f0` |
+
+What they found that needs a decision:
+- **The configured model shuts down.** OpenAI shuts `gpt-4.1` down on 2027-01-14 and names `gpt-6-luna` as the
+  replacement, which costs a twentieth as much. Changing `GEEK_SOCIAL_AI_MODEL` is a Railway change. Run one live
+  triage first, to check that its 400-token output limit is enough.
+- **Nextdoor's Publish API form excludes GeekSocial's use.** It says the API "is not available for promoting your
+  own business or your clients' businesses". Nextdoor's Share Plugin needs no approval, which the roadmap's
+  Nextdoor line does not reflect. See the register's Nextdoor section.
+- **X is the largest per-tenant cost for any tenant that uses it.** A link post costs $0.200. A flat price loses
+  money on a heavy X tenant below $99 (input to Q2).
+- **AI token counts are not kept.** Every model client returns them, and no caller keeps them. So the cost model
+  and the planned daily AI cap cannot be checked against real use.
+- **Connector contract gaps 1 and 2.**
+  - Gap 1: a refused token does not mark the account `reconnect_required`.
+  - Gap 2: there is no disconnect, and no Meta deauthorize or data-deletion callback. Meta's review needs a
+    deletion URL or callback.
+  - Gap 2 can be met for the review by the draft privacy policy's `#delete` section, once it is published.
+- **`PLATFORM-CAPABILITIES.md` corrected.** Three LinkedIn lines now match its own section 2j: webhooks need the
+  Standard tier, the payload can carry comment text, and whether technical sign-off gates Standard is UNVERIFIED.
+
 ## Where it stands at the end of 2026-11-16
 
 Every screen now renders on the server (Server Components read GeekAPI through `src/lib/server/social-api.ts`;
@@ -188,16 +231,21 @@ displayed as it came), and a refused token is never replaced with another creden
 
 ## Next steps, in order
 
-1. Phase 0's live walkthrough (roadmap, "Verification, every phase"): sign in by hand on
-   `geek-social.geekatyourspot.com` (register, confirm by email, sign in), complete `/welcome`, then use each
-   screen and fix what the real services show. Check: live updates connect with no "Live updates are off"
-   banner; Activity shows only this tenant's numbers and names the AI provider; no auto-send setting appears;
-   `/robots.txt` disallows all; the post form offers only what Facebook accepts.
-2. Confirm the external state: GeekAPI Railway variables, migration 0064 on Railway, Meta app login
-   configuration and webhook, GeekOAuth client redirect URIs (GeekBackend handoff, "Railway variables"
+1. What the owner does or decides before the walkthrough can go on:
+   - In the Meta app, create the Facebook Login for Business configuration and give its id, for
+     `GEEK_SOCIAL_META_LOGIN_CONFIG_ID`.
+   - Approve generating `GEEK_SOCIAL_META_VERIFY_TOKEN`; it is set on Railway and entered in the Meta webhook
+     settings.
+   - Choose the AI provider and model, given `gpt-4.1`'s shutdown, and clear it for Facebook. Either add
+     `openai:facebook` once M4 is checked for OpenAI, or switch to Anthropic, which is cleared.
+   - Approve the legal pages' text and governing law, and their push (this repo is public).
+   - Decide whether connector contract gaps 1 and 2, and keeping the AI token counts, are built now.
+   - Decide Nextdoor's plan.
+2. Phase 0's live walkthrough, part 2 (part 1 is above): connect a Page on `/accounts`, read `/activity`, comment
+   on a post, watch the draft arrive over SignalR, edit and approve it. A person approves every reply.
+3. Confirm the external state: GeekAPI Railway variables, migration 0064 on Railway, the Meta app's login
+   configuration and webhook, and GeekOAuth's client redirect URIs (GeekBackend handoff, "Railway variables"
    and "Meta app settings").
-3. Connect a Page on `/accounts`, read `/activity`, comment on a post, watch the draft arrive over
-   SignalR, edit and approve it. Auto-send is removed (roadmap Phase 0, item 2): a person approves every reply.
 4. Remove `geek-social.vercel.app` from the Meta app console (`AUDIT.md` finding 1).
 5. Later gates: image storage (7c), connectors one platform at a time, the 30-day retention purge,
    and the confirmed-email onboarding check and 403 handling from 7b.
