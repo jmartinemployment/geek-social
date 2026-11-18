@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ErrorNote, Notice, Panel, inputClass, labelClass, primaryButton, quietButton, secondaryButton } from "@/components/ui";
 import { useServerRefresh } from "@/lib/hooks/use-server-refresh";
 import { mayHaveHappened } from "@/lib/social/outcome";
-import type { LinkPost, SocialAccount } from "@/lib/social/types";
+import type { LinkPost, PlatformCapabilities, SocialAccount } from "@/lib/social/types";
 import { platformWords, ruleWords } from "@/lib/social/words";
 import type { PostActions } from "@/services/post-actions";
 import { SocialApiError, errorText } from "@/services/social-api";
@@ -34,11 +34,22 @@ const EMPTY_FORM: PostForm = {
 const orNull = (value: string) => (value.trim() === "" ? null : value.trim());
 
 /**
- * The new-post form: the Post Writer suggests copy, a person edits it, then it is published once. The fields are this
- * form's own state until Publish; a publish that gets no clear answer keeps Publish off until the person has looked at
- * the Page.
+ * The new-post form: the Post Writer suggests copy, a person edits it, then it is published once. It offers only what
+ * the chosen account's network accepts, as GeekAPI's capability matrix says: only accounts whose network publishes link
+ * posts, a link title, description and picture only where the network takes them (Facebook reads them from the page),
+ * and a title required where the network needs one. A field the network does not take is never sent. The fields are
+ * this form's own state until Publish; a publish that gets no clear answer keeps Publish off until the person has looked
+ * at the Page.
  */
-export function PostWriter({ accounts, actions }: { accounts: SocialAccount[]; actions: PostActions }) {
+export function PostWriter({
+  accounts,
+  platforms,
+  actions,
+}: {
+  accounts: SocialAccount[];
+  platforms: PlatformCapabilities[];
+  actions: PostActions;
+}) {
   // The server reads the published list again, so a post that went out shows up.
   const { refresh: onPublished } = useServerRefresh();
   const [form, setForm] = useState<PostForm>(EMPTY_FORM);
@@ -50,7 +61,21 @@ export function PostWriter({ accounts, actions }: { accounts: SocialAccount[]; a
   // operator has looked at the Page.
   const [uncertain, setUncertain] = useState<string | null>(null);
 
-  const account = accounts.find((a) => a.id === form.accountId) ?? null;
+  const capabilitiesOf = (a: SocialAccount) => platforms.find((p) => p.platform === a.platform) ?? null;
+  const offered = accounts.filter((a) => capabilitiesOf(a)?.publishKinds.includes("link") ?? false);
+  const noLinkPosts = accounts.filter((a) => {
+    const c = capabilitiesOf(a);
+    return c !== null && !c.publishKinds.includes("link");
+  });
+  const undescribed = accounts.filter((a) => capabilitiesOf(a) === null);
+
+  const account = offered.find((a) => a.id === form.accountId) ?? null;
+  const capabilities = account ? capabilitiesOf(account) : null;
+  const takesPreview = capabilities?.linkPostTakesPreview ?? false;
+  const needsTitle = capabilities?.linkPostNeedsTitle ?? false;
+  const takesImage = takesPreview || (capabilities?.postNeedsImageUrl ?? false);
+  // A field the network does not take is never sent, even if it was typed before the account changed.
+  const taken = (value: string, offeredHere: boolean) => (offeredHere ? orNull(value) : null);
   const set = (field: keyof PostForm) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -69,7 +94,7 @@ export function PostWriter({ accounts, actions }: { accounts: SocialAccount[]; a
         articleTitle: form.articleTitle.trim(),
         articleSummary: form.articleSummary.trim(),
         platforms: [account.platform],
-        imageUrl: orNull(form.imageUrl),
+        imageUrl: taken(form.imageUrl, takesImage),
       });
       const copy = result.copies.find((c) => c.platform === account.platform);
       if (!copy) {
@@ -107,9 +132,9 @@ export function PostWriter({ accounts, actions }: { accounts: SocialAccount[]; a
       kind: "link",
       text: form.text,
       linkUrl: form.articleUrl.trim(),
-      linkTitle: orNull(form.linkTitle),
-      linkDescription: orNull(form.linkDescription),
-      imageUrl: orNull(form.imageUrl),
+      linkTitle: taken(form.linkTitle, takesPreview),
+      linkDescription: taken(form.linkDescription, takesPreview),
+      imageUrl: taken(form.imageUrl, takesImage),
       scheduledFor: null,
     };
     try {
@@ -137,16 +162,37 @@ export function PostWriter({ accounts, actions }: { accounts: SocialAccount[]; a
     form.articleUrl.trim() !== "" &&
     form.articleTitle.trim() !== "" &&
     form.articleSummary.trim() !== "";
-  const canPublish = account !== null && form.articleUrl.trim() !== "" && form.text.trim() !== "";
+  const canPublish =
+    account !== null &&
+    form.articleUrl.trim() !== "" &&
+    form.text.trim() !== "" &&
+    (!needsTitle || form.linkTitle.trim() !== "");
 
   return (
     <Panel title="New link post">
+      {noLinkPosts.length > 0 ? (
+        <div className="mb-4">
+          <Notice tone="warn">
+            Not offered here, because their network publishes no link post:{" "}
+            {noLinkPosts.map((a) => `${a.displayName} (${platformWords(a.platform)})`).join(", ")}.
+          </Notice>
+        </div>
+      ) : null}
+      {undescribed.length > 0 ? (
+        <div className="mb-4">
+          <ErrorNote
+            message={`GeekAPI does not say what a post may carry on ${undescribed
+              .map((a) => `${a.displayName} (${platformWords(a.platform)})`)
+              .join(", ")}, so the form does not offer ${undescribed.length === 1 ? "it" : "them"}.`}
+          />
+        </div>
+      ) : null}
       <div className="grid gap-4 md:grid-cols-2">
         <label className={labelClass}>
           Account
           <select value={form.accountId} onChange={set("accountId")} className={inputClass} disabled={busy !== null}>
             <option value="">Choose an account</option>
-            {accounts.map((a) => (
+            {offered.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.displayName} ({platformWords(a.platform)})
               </option>
@@ -161,10 +207,12 @@ export function PostWriter({ accounts, actions }: { accounts: SocialAccount[]; a
           Title
           <input value={form.articleTitle} onChange={set("articleTitle")} className={inputClass} />
         </label>
-        <label className={labelClass}>
-          Image URL <span className="text-xs font-normal text-muted">(optional)</span>
-          <input type="url" value={form.imageUrl} onChange={set("imageUrl")} className={inputClass} />
-        </label>
+        {takesImage ? (
+          <label className={labelClass}>
+            Image URL <span className="text-xs font-normal text-muted">(optional)</span>
+            <input type="url" value={form.imageUrl} onChange={set("imageUrl")} className={inputClass} />
+          </label>
+        ) : null}
         <label className={`${labelClass} md:col-span-2`}>
           Summary
           <textarea value={form.articleSummary} onChange={set("articleSummary")} rows={3} className={inputClass} />
@@ -198,16 +246,23 @@ export function PostWriter({ accounts, actions }: { accounts: SocialAccount[]; a
             </div>
           ) : null}
         </div>
-        <div className="mt-3 grid gap-4 md:grid-cols-2">
-          <label className={labelClass}>
-            Link title <span className="text-xs font-normal text-muted">(optional)</span>
-            <input value={form.linkTitle} onChange={set("linkTitle")} className={inputClass} />
-          </label>
-          <label className={labelClass}>
-            Link description <span className="text-xs font-normal text-muted">(optional)</span>
-            <input value={form.linkDescription} onChange={set("linkDescription")} className={inputClass} />
-          </label>
-        </div>
+        {takesPreview ? (
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            <label className={labelClass}>
+              Link title{" "}
+              <span className="text-xs font-normal text-muted">{needsTitle ? "(required on this network)" : "(optional)"}</span>
+              <input value={form.linkTitle} onChange={set("linkTitle")} className={inputClass} />
+            </label>
+            <label className={labelClass}>
+              Link description <span className="text-xs font-normal text-muted">(optional)</span>
+              <input value={form.linkDescription} onChange={set("linkDescription")} className={inputClass} />
+            </label>
+          </div>
+        ) : account ? (
+          <p className="mt-3 text-xs text-muted">
+            {platformWords(account.platform)} takes the link&apos;s title, description and picture from the linked page.
+          </p>
+        ) : null}
       </div>
 
       {error ? (
@@ -243,7 +298,9 @@ export function PostWriter({ accounts, actions }: { accounts: SocialAccount[]; a
         </button>
         {account ? (
           <span className="ml-3 text-xs text-muted">
-            Publishes once, now, to {account.displayName} on {platformWords(account.platform)}.
+            {needsTitle && form.linkTitle.trim() === ""
+              ? `${platformWords(account.platform)} needs a link title before it can publish.`
+              : `Publishes once, now, to ${account.displayName} on ${platformWords(account.platform)}.`}
           </span>
         ) : null}
       </div>

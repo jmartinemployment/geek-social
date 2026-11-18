@@ -1,4 +1,4 @@
-import type { ReplyDraft, SocialAccount, SocialCommentView, StoredPost } from "@/lib/social/types";
+import type { PlatformCapabilities, ReplyDraft, SocialAccount, SocialCommentView, StoredPost } from "@/lib/social/types";
 
 export function draft(overrides: Partial<ReplyDraft> = {}): ReplyDraft {
   return {
@@ -40,6 +40,27 @@ export function account(overrides: Partial<SocialAccount> = {}): SocialAccount {
     ...overrides,
   };
 }
+
+/** What GeekAPI's capability matrix says about one platform; Facebook unless overridden. */
+export function platform(overrides: Partial<PlatformCapabilities> = {}): PlatformCapabilities {
+  return {
+    platform: "facebook",
+    publishKinds: ["link"],
+    linkPostNeedsTitle: false,
+    linkPostTakesPreview: false,
+    postNeedsImageUrl: false,
+    canSchedulePosts: true,
+    ...overrides,
+  };
+}
+
+/** The matrix as GeekAPI serves it today, one row per platform. */
+export const PLATFORMS: PlatformCapabilities[] = [
+  platform(),
+  platform({ platform: "instagram", publishKinds: ["image"], postNeedsImageUrl: true, canSchedulePosts: false }),
+  platform({ platform: "linkedin_organization", linkPostNeedsTitle: true, linkPostTakesPreview: true, canSchedulePosts: false }),
+  platform({ platform: "linkedin_member", linkPostNeedsTitle: true, linkPostTakesPreview: true, canSchedulePosts: false }),
+];
 
 export function storedPost(overrides: Partial<StoredPost> = {}): StoredPost {
   return {

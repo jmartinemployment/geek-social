@@ -5,10 +5,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { PostWriter } from "@/components/social/PostWriter";
 import type { LinkPost, PostCopyRequest } from "@/lib/social/types";
-import { ruleWords } from "@/lib/social/words";
+import { platformWords, ruleWords } from "@/lib/social/words";
 import { SocialApiError } from "@/services/social-api";
 import type { PostActions } from "@/services/post-actions";
-import { account, storedPost } from "@/test/fixtures";
+import { PLATFORMS, account, storedPost } from "@/test/fixtures";
 
 let refreshes: number;
 const router = {
@@ -31,13 +31,15 @@ const unused: PostActions = {
   },
 };
 
-function mount(actions: PostActions = unused, accounts = [account()]) {
+function mount(actions: PostActions = unused, accounts = [account()], platforms = PLATFORMS) {
   render(
     <AppRouterContext.Provider value={router}>
-      <PostWriter accounts={accounts} actions={actions} />
+      <PostWriter accounts={accounts} platforms={platforms} actions={actions} />
     </AppRouterContext.Provider>,
   );
 }
+
+const linkedIn = account({ id: "a2", platform: "linkedin_organization", displayName: "Acme Company" });
 
 const click = (name: string) => fireEvent.click(screen.getByRole("button", { name }));
 const type = (label: string | RegExp, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
@@ -143,7 +145,71 @@ test("Suggest copy asks for the chosen account's platform and fills the text fro
   assert.deepEqual(asked, [
     { articleUrl: "https://geekatyourspot.com/guide", articleTitle: "The guide", articleSummary: "A short summary.", platforms: ["facebook"], imageUrl: null },
   ]);
-  assert.equal((screen.getByLabelText(/Link title/) as HTMLInputElement).value, "The guide");
+  assert.equal(screen.queryByLabelText(/Link title/), null, "Facebook takes the title from the page, so the suggested one is not offered");
+});
+
+// ----- What each network accepts -----
+
+test("for a Facebook account the form offers no link title, description or picture, says why, and sends none", async () => {
+  const sent: LinkPost[] = [];
+  mount({
+    ...unused,
+    suggestCopy: async () => ({
+      copies: [{ platform: "facebook", post: { kind: "link", text: "Draft.", linkUrl: "https://geekatyourspot.com/guide", linkTitle: "Suggested title", linkDescription: "Suggested description", imageUrl: null, scheduledFor: null } }],
+    }),
+    publish: async (_, post) => (sent.push(post), storedPost()),
+  });
+  fillForm();
+  assert.equal(screen.queryByLabelText(/Image URL/), null);
+  assert.equal(screen.queryByLabelText(/Link title/), null);
+  assert.equal(screen.queryByLabelText(/Link description/), null);
+  screen.getByText(/Facebook takes the link's title, description and picture from the linked page/);
+
+  click("Suggest copy");
+  await waitFor(() => assert.equal((screen.getByLabelText(/^Post text/) as HTMLTextAreaElement).value, "Draft."));
+  click("Publish");
+  await waitFor(() => assert.equal(sent.length, 1));
+  assert.equal(sent[0].linkTitle, null, "a suggested title Facebook would refuse is never sent");
+  assert.equal(sent[0].linkDescription, null);
+  assert.equal(sent[0].imageUrl, null);
+});
+
+test("on a network that takes a preview the fields are offered, and one that needs a title keeps Publish off until it has one", async () => {
+  const sent: LinkPost[] = [];
+  mount({ ...unused, publish: async (_, post) => (sent.push(post), storedPost()) }, [account(), linkedIn]);
+  type("Account", "a2");
+  type("Article URL", "https://geekatyourspot.com/guide");
+  type(/^Post text/, "Read our latest guide.");
+  screen.getByText("(required on this network)");
+  screen.getByLabelText(/Image URL/);
+  screen.getByLabelText(/Link description/);
+  assert.equal(publishButton().disabled, true);
+  screen.getByText(`${platformWords("linkedin_organization")} needs a link title before it can publish.`);
+
+  type(/^Link title/, "The guide");
+  type(/^Link description/, "A short guide.");
+  assert.equal(publishButton().disabled, false);
+  click("Publish");
+  await waitFor(() => assert.equal(sent.length, 1));
+  assert.equal(sent[0].linkTitle, "The guide");
+  assert.equal(sent[0].linkDescription, "A short guide.");
+});
+
+test("an account whose network publishes no link post is not offered, and the form says why", () => {
+  mount(unused, [account(), account({ id: "a3", platform: "instagram", displayName: "Acme Gram" })]);
+  assert.equal(screen.queryByRole("option", { name: /Acme Gram/ }), null);
+  screen.getByRole("option", { name: /Acme Page/ });
+  screen.getByText(/Not offered here, because their network publishes no link post: Acme Gram/);
+});
+
+test("an account whose platform GeekAPI does not describe is not offered, and the form says so in red", () => {
+  mount(
+    unused,
+    [account(), account({ id: "a4", platform: "linkedin_member", displayName: "Old Page" })],
+    PLATFORMS.filter((p) => p.platform !== "linkedin_member"),
+  );
+  assert.equal(screen.queryByRole("option", { name: /Old Page/ }), null);
+  screen.getByText(/GeekAPI does not say what a post may carry on Old Page/);
 });
 
 test("a Suggest copy that fails shows its cause, and one with no copy for the platform says so", async () => {

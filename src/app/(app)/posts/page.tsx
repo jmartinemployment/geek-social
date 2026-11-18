@@ -7,24 +7,33 @@ import { readAccounts, serverTransport } from "@/lib/server/social-api";
 import { readOrRefusal, resolveChosenAccount } from "@/lib/social/page-reads";
 import type { SocialAccount } from "@/lib/social/types";
 import { platformWords } from "@/lib/social/words";
-import { LIST_LIMIT, postApi } from "@/services/social-api";
+import { LIST_LIMIT, platformsApi, postApi } from "@/services/social-api";
 
 /**
- * Publish a link post. The writer is the interactive part; the published list is read on the server for the account in
- * the address (`?account=`). GeekAPI lists posts for one account only, so there is always one: the one named, else the
- * first connected. A list that fails to read says so in its own panel, and the writer still works.
+ * Publish a link post. The writer is the interactive part, and it offers only what each network accepts, from GeekAPI's
+ * capability matrix; without that list it cannot say what a post may carry, so it says so instead of showing a form.
+ * The published list is read on the server for the account in the address (`?account=`). GeekAPI lists posts for one
+ * account only, so there is always one: the one named, else the first connected. A list that fails to read says so in
+ * its own panel, and the writer still works.
  */
 export default async function PostsPage({ searchParams }: { searchParams: Promise<{ account?: string }> }) {
   const params = await searchParams;
   const accounts = await readAccounts();
   const { chosen, unknown } = resolveChosenAccount(accounts, params.account ?? null);
+  const platforms = await readOrRefusal(() => platformsApi(serverTransport).list());
 
   return (
     <PageFrame
       title="Posts"
       intro="Share an article as a link post. Suggest copy writes a first version; nothing is posted until you press Publish."
     >
-      <AppPostWriter accounts={accounts} />
+      {platforms.ok ? (
+        <AppPostWriter accounts={accounts} platforms={platforms.value} />
+      ) : (
+        <Panel title="New link post">
+          <ErrorNote message={`The post form needs the list of what each network accepts, which did not load: ${platforms.message}`} />
+        </Panel>
+      )}
 
       <Panel title="Published posts" aside={chosen ? <UrlAccountFilter accounts={accounts} value={chosen.id} allowAll={false} /> : null}>
         {unknown && chosen ? (

@@ -13,6 +13,7 @@ import type {
   LinkPost,
   MetaConnectComplete,
   MetaConnectStart,
+  PlatformCapabilities,
   PostCopyRequest,
   PostCopyResult,
   ReactResult,
@@ -233,6 +234,10 @@ export function postApi(call: Transport) {
 // Status and audit
 
 /** The status call over one transport. */
+export function platformsApi(call: Transport) {
+  return { list: () => call<PlatformCapabilities[]>("GET", "/platforms") };
+}
+
 export function statusApi(call: Transport) {
   return { get: () => call<SocialStatus>("GET", "/status") };
 }

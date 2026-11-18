@@ -211,6 +211,17 @@ export interface AiProviderStatus {
   apiKeySet: boolean;
 }
 
+/** What a post may carry on one platform, from GeekAPI's capability matrix (`GET /platforms`). */
+export interface PlatformCapabilities {
+  platform: string;
+  publishKinds: string[];
+  linkPostNeedsTitle: boolean;
+  /** False where the platform reads a link's title, description and picture from the linked page (Facebook). */
+  linkPostTakesPreview: boolean;
+  postNeedsImageUrl: boolean;
+  canSchedulePosts: boolean;
+}
+
 /** The signed-in person's tenant's status: only its own counts, and its own failures plus GeekSocial-wide ones. */
 export interface SocialStatus {
   comments: CommentCounts;
