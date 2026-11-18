@@ -24,14 +24,14 @@ const never = async (): Promise<WelcomeState> => {
 function mount(props: Partial<React.ComponentProps<typeof WelcomeForms>> & { tenant: SocialTenant | null }) {
   return render(
     <ToastProvider>
-      <WelcomeForms suggestedName="" signUp={never} acceptTerms={never} {...props} />
+      <WelcomeForms signUp={never} acceptTerms={never} {...props} />
     </ToastProvider>,
   );
 }
 
-test("a person with no tenant sees the sign-up form with their name suggested, and no terms", () => {
-  mount({ tenant: null, suggestedName: "Jeff Martin" });
-  assert.equal((screen.getByLabelText("Business name") as HTMLInputElement).value, "Jeff Martin");
+test("a person with no tenant sees the sign-up form with the business name empty, and no terms", () => {
+  mount({ tenant: null });
+  assert.equal((screen.getByLabelText("Business name") as HTMLInputElement).value, "");
   assert.ok(screen.getByRole("button", { name: "Sign up for GeekSocial" }));
   assert.equal(screen.queryByRole("button", { name: "Agree" }), null);
 });
@@ -59,11 +59,10 @@ test("a sign-up that fails says why, inline, and stays on the form", async () =>
   assert.ok(screen.getByRole("button", { name: "Sign up for GeekSocial" }));
 });
 
-test("a sign-up that fails keeps the name that was typed, so a retry sends it and not the suggestion", async () => {
+test("a sign-up that fails keeps the name that was typed, so a retry sends it again", async () => {
   const sent: string[] = [];
   mount({
     tenant: null,
-    suggestedName: "Ada Lovelace",
     signUp: async (_previous, formData) => {
       const name = String(formData.get("name"));
       sent.push(name);

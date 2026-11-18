@@ -8,6 +8,7 @@
     "start": "next start -p 3006",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "check:trace": "node scripts/check-live-updates-trace.mjs",
     "test": "node --import tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\""
   },
   "dependencies": {

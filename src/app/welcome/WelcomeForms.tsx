@@ -19,7 +19,7 @@ function useReportedError(state: WelcomeState) {
   }, [state, toast]);
 }
 
-function SignUpForm({ action, suggestedName }: { action: WelcomeAction; suggestedName: string }) {
+function SignUpForm({ action }: { action: WelcomeAction }) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   useReportedError(state);
 
@@ -27,8 +27,9 @@ function SignUpForm({ action, suggestedName }: { action: WelcomeAction; suggeste
     <form action={formAction} className="flex max-w-md flex-col gap-4">
       <label className={labelClass}>
         Business name
-        {/* React clears a form after its action runs, so what was typed comes back through the state or it would be lost. */}
-        <input name="name" required defaultValue={state.name ?? suggestedName} autoComplete="organization" className={inputClass} />
+        {/* React clears a form after its action runs, so what was typed comes back through the state or it would be lost.
+            It starts empty: the sign-in knows nothing about the business, and its "name" is the login, an email address. */}
+        <input name="name" required defaultValue={state.name ?? ""} autoComplete="organization" className={inputClass} />
       </label>
       {state.error ? (
         <p role="alert" className="text-sm text-red-700">
@@ -77,16 +78,14 @@ function AiTermsForm({ action }: { action: WelcomeAction }) {
  */
 export function WelcomeForms({
   tenant,
-  suggestedName,
   signUp,
   acceptTerms,
 }: {
   tenant: SocialTenant | null;
-  suggestedName: string;
   signUp: WelcomeAction;
   acceptTerms: WelcomeAction;
 }) {
-  if (!tenant) return <SignUpForm action={signUp} suggestedName={suggestedName} />;
+  if (!tenant) return <SignUpForm action={signUp} />;
 
   return (
     <div className="flex flex-col gap-8">

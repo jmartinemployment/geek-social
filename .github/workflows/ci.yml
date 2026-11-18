@@ -45,3 +45,6 @@ jobs:
           OAUTH_CLIENT_SECRET: ci-placeholder-client-secret-0123456789
           OAUTH_REDIRECT_URI: https://geek-social.example.test/api/auth/callback
           SESSION_SECRET: ci-placeholder-session-secret-0123456789abcdef
+
+      - name: Live-updates function carries SignalR's run-time modules
+        run: npm run check:trace
