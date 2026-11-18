@@ -1,15 +1,23 @@
 # geek-social
 
 The GeekSocial operator screen. GeekSocial is a multi-tenant, multi-platform product that runs inside
-GeekAPI: it watches comments on each tenant's connected social accounts, has Claude classify each
+GeekAPI: it watches comments on each tenant's connected social accounts, has the AI classify each
 comment and draft a reply, and holds every draft for a person to approve, edit or reject before it is
 sent. It also publishes link posts. This app is the operator's inbox and controls. It has no database
 and no platform credentials of its own.
 
+**Plan of work.** `plans/geek-social-roadmap-2026-11-18.md` (revision 3, frozen 2026-11-18): the scope,
+the phases, and the open decisions. The research behind it is in `GeekBackend/docs/market-research-2026-11-18/`,
+and competitor pricing is in `plans/geek-social-competitor-pricing-2026-11-18.md`.
+
 **Platforms.** In scope: Facebook, Instagram, LinkedIn (organisation and member), Google Business
-Profile, X and TikTok (`plans/geek-social-multi-tenant-connectors-2026-11-16.md`, "Platforms"). Only the
-Facebook Pages connector is built so far; the others are connectors still to build in GeekAPI. The
-screens are platform-neutral, apart from the Facebook connect flow on `/accounts`.
+Profile, X, TikTok, YouTube and Pinterest, and Nextdoor as plan-and-approve. GeekSocial owns the app on
+each network, and a tenant connects by signing in. Only the Facebook Pages connector is built so far; the
+others are connectors still to build in GeekAPI. The screens are platform-neutral, apart from the Facebook
+connect flow on `/accounts`.
+
+**AI.** As built, GeekAPI calls only Claude, and the screens say "Claude". Roadmap Phase 0, item 1 makes
+the provider replaceable by configuration. The screens will then name whichever provider is configured.
 
 **Billing.** GeekSocial is a paid SaaS, and tenants pay through PayPal. None of that is built yet: today
 `/welcome` creates a tenant for any signed-in person, free of charge. GeekBackend already has a PayPal
@@ -24,7 +32,7 @@ The contract it is built against is `GeekBackend/docs/GEEK-SOCIAL-API.md`.
 |---|---|
 | `/` | Inbox: drafts by tab (Pending, For a person, Refused, Rejected, Approved and held, Sent, Failed). Edit (saved only by Save), Approve and send, Send, Reject. |
 | `/comments` | Comments that did not become a draft: Held, Failed, Waiting, No reply needed. Run again, Like. |
-| `/accounts` | Connect a Facebook Page, auto-send categories, Pause sends (saved only by Save), Resync. |
+| `/accounts` | Connect a Facebook Page, auto-send categories (no effect: GeekAPI no longer auto-sends; removed in roadmap Phase 0), Pause sends (saved only by Save), Resync. |
 | `/connect/meta/callback` | Where Meta returns after a connect; completes it with GeekAPI. |
 | `/posts` | Suggest copy, edit, Publish a link post; the published posts. |
 | `/activity` | Status (clearance, Meta settings, send limits, orchestrator counts and failures) and the audit. |

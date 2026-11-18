@@ -1,7 +1,11 @@
 # Plan: make the GeekSocial Orchestrator an LLM-driven agent
 
 Status: proposed, not approved. Revised twice on 2026-11-18, the second time after an AI review. Nothing in it is
-built. Owner decisions D1 to D3 are open. All code work is in `GeekBackend`; whether the `geek-social` screen
+built.
+
+**Conflicts with the roadmap, 2026-11-18** (`plans/geek-social-roadmap-2026-11-18.md`, Phase 5):
+- **Call limit:** this plan allows up to 8 model turns plus re-drafts per comment, but a comment may go to the AI model at most twice per reply. It must be redesigned to fit that budget, or dropped.
+- **AI provider:** it also assumes Claude. Under the roadmap the provider is replaceable (Phase 0, item 1), so any redesign goes through the provider-neutral interface. Owner decisions D1 to D3 are open. All code work is in `GeekBackend`; whether the `geek-social` screen
 changes depends on D1 and D2.
 
 ## Revision history

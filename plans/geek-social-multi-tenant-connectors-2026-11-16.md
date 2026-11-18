@@ -6,8 +6,16 @@ follows from this until each gate below is approved.
 
 ## Approved adjustments (Jeff, 2026-11-16; these override the decisions below where they differ)
 
+**Superseded for scope and order, 2026-11-18,** by `plans/geek-social-roadmap-2026-11-18.md` (revision 3). The changes:
+- YouTube and Pinterest are back in scope.
+- Nextdoor is plan-and-approve.
+- GeekSocial owns the app on each network, and tenants connect by signing in.
+
+The rest of this file stays as the record of 2026-11-16.
+
 1. **Full platform scope, no exclusions:** Facebook, Instagram, LinkedIn, Google Business Profile, X,
-   and TikTok (YouTube and Pinterest were dropped 2026-11-16). A platform that cannot do something (read comments, receive pushes) is
+   TikTok, YouTube and Pinterest, and Nextdoor as plan-and-approve. YouTube and Pinterest were dropped on
+   2026-11-16 and restored on 2026-11-18. A platform that cannot do something (read comments, receive pushes) is
    marked BLOCKED for that action in the matrix, not dropped. `ISocialPublisher` (every platform) stays
    separate from `ISocialEngagementReader` (only the platforms that have comments or reviews to read).
 2. **Everything real-time goes through one tenant-scoped SignalR hub in GeekAPI:** incoming webhook items,
@@ -86,9 +94,10 @@ here**. GeekSocial writes the post and its image prompt, stores the image, and p
 | LinkedIn organisation, member | Declared, no connector | LinkedIn app and Community Management approval (yours to request); member stays publish-only |
 | Google Business Profile | In scope | Gate 7a: API access request, review and reply endpoints, Pub/Sub push for reviews |
 | X | In scope | Gate 7a: which tier can read mentions, its cost, and whether mentions arrive without polling |
-| YouTube | NOT SUPPORTED (Jeff, 2026-11-16); research kept | none |
+| YouTube | In scope since 2026-11-18 (roadmap Phase 4; which operations is decision Q12) | The quota question; `PLATFORM-CAPABILITIES.md` 2g |
 | TikTok | In scope | Gate 7a: Content Posting API audit, whether any comment API exists for third parties |
-| Pinterest | NOT SUPPORTED (Jeff, 2026-11-16): publish-only; research kept | none |
+| Pinterest | In scope since 2026-11-18 (roadmap Phase 4): publish-only, no inbox | `PLATFORM-CAPABILITIES.md` 2i |
+| Nextdoor | Planned and approved in GeekSocial since 2026-11-18; publishing through its API once access exists | Nextdoor API access |
 
 Google, X, YouTube, TikTok and Pinterest are researched in Gate 7a and written into
 `PLATFORM-CAPABILITIES.md`; nothing about them is coded from memory.

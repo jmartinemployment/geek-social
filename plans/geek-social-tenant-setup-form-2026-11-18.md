@@ -1,5 +1,11 @@
 # Plan: a multi-step form where each tenant sets up its own Facebook app
 
+**SUPERSEDED 2026-11-18. Do not build from this file.** GeekSocial owns the app on each network, and a tenant
+connects by signing in, as the researched tools do (`plans/geek-social-roadmap-2026-11-18.md`, Requirements).
+- The multi-step form remains, as the onboarding wizard in roadmap Phase 1: business, plan and payment, AI terms, connect networks, invite team. It collects no app keys.
+- The part about rotating `GEEK_SOCIAL_ENCRYPTION_KEY` carries over to Phase 1.
+- This file stays as the record of the earlier model.
+
 ## Why
 
 GeekSocial is a sellable multi-tenant product. Jeff, 2026-11-18, in conversation: "There should be a

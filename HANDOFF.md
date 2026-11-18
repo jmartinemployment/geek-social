@@ -104,13 +104,13 @@ and streams it to the browser over Server-Sent Events) with a banner when the co
   `PostWriter`, `StatusView` with `LiveRefresh` and `ReloadButton`, `MetaCallbackView`, `Time`,
   `SocialHubProvider`, `useServerRefresh` (idle path and the coalescing of a burst), `ActionResult`, `page-reads`. Not covered: the server pages,
   `AppNavbar` and the UI primitives.
-- **CI has run on GitHub, and the build step flaked.** `.github/workflows/ci.yml` runs typecheck, lint,
-  tests and the build on every push and pull request. On 2026-11-16 two of five runs failed in
-  `next build` with "An error occurred in `next/font`" while fetching Fraunces from Google Fonts. The
-  fonts are now served from the `@fontsource-variable` packages through `next/font/local`, so the build
-  makes no font request. Not yet confirmed on GitHub: that needs a push and a green run.
+- **CI on GitHub.** `.github/workflows/ci.yml` runs typecheck, lint, tests, the build and `npm run
+  check:trace` on every push and pull request.
+  - **Fonts:** on 2026-11-16, two of five runs failed in `next build` while fetching Fraunces from Google Fonts. The fonts are now served from the `@fontsource-variable` packages, and the runs since (2026-11-17, 2026-11-18) are green.
+  - **check:trace:** it rebuilds the SignalR hub connection from only the files Vercel would ship for `/api/live-updates`, and fails on a missing module. The deployed function had been failing with "Cannot find module 'ws'"; `next.config.ts` `outputFileTracingIncludes` fixes that (`f9745fe`).
 - **Only the Facebook connector is built.** GeekSocial is multi-platform and never was a Facebook
-  tool: Instagram, LinkedIn, Google Business Profile, X and TikTok are in scope (README, "Platforms").
+  tool: Instagram, LinkedIn, Google Business Profile, X, TikTok, YouTube and Pinterest are in scope, and
+  Nextdoor as plan-and-approve (README, "Platforms"; `plans/geek-social-roadmap-2026-11-18.md`).
   Their connectors are GeekAPI work, not this repo's; the screens are platform-neutral apart from the
   Facebook connect flow on `/accounts`.
 - **No billing yet.** GeekSocial is a paid SaaS that uses PayPal (README, "Billing"). Sign-up is open
@@ -151,7 +151,8 @@ displayed as it came), and a refused token is never replaced with another creden
    configuration and webhook, GeekOAuth client redirect URIs (GeekBackend handoff, "Railway variables"
    and "Meta app settings").
 3. Connect a Page on `/accounts`, read `/activity`, comment on a post, watch the draft arrive over
-   SignalR, edit and approve it. Leave auto-send off until several drafts have been reviewed.
+   SignalR, edit and approve it. GeekAPI no longer auto-sends (GeekBackend `02de4a82`), so the auto-send
+   boxes on `/accounts` have no effect until roadmap Phase 0 removes them.
 4. Remove `geek-social.vercel.app` from the Meta app console (`AUDIT.md` finding 1).
 5. Later gates: image storage (7c), connectors one platform at a time, the 30-day retention purge,
    and the confirmed-email onboarding check, auto-send removal and 403 handling from 7b.

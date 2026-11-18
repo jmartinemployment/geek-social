@@ -1,5 +1,12 @@
 # GeekSocial engagement agents and orchestrator (Facebook, Instagram, LinkedIn)
 
+**Superseded for scope, 2026-11-18,** by `plans/geek-social-roadmap-2026-11-18.md` (revision 3). Where they differ, the roadmap wins:
+- **Networks:** all the networks in the roadmap, not three.
+- **No auto-send:** a person approves every reply and every post. The auto-send passages below no longer apply; GeekAPI stopped auto-sending in GeekBackend `02de4a82`, and Phase 0 removes the setting.
+- **AI provider:** replaceable, not Claude only.
+
+This file stays as the record of how the agents were designed.
+
 ## Context
 
 Jeff wants a service that publishes article and link posts to a Facebook Page, Instagram and
