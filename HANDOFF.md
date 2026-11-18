@@ -109,8 +109,12 @@ and streams it to the browser over Server-Sent Events) with a banner when the co
   `next build` with "An error occurred in `next/font`" while fetching Fraunces from Google Fonts. The
   fonts are now served from the `@fontsource-variable` packages through `next/font/local`, so the build
   makes no font request. Not yet confirmed on GitHub: that needs a push and a green run.
-- **Facebook Pages only.** Other platforms are connectors in GeekAPI, not work in this repo; the
-  screen is platform-neutral.
+- **Only the Facebook connector is built.** GeekSocial is multi-platform and never was a Facebook
+  tool: Instagram, LinkedIn, Google Business Profile, X and TikTok are in scope (README, "Platforms").
+  Their connectors are GeekAPI work, not this repo's; the screens are platform-neutral apart from the
+  Facebook connect flow on `/accounts`.
+- **No billing yet.** GeekSocial is a paid SaaS that uses PayPal (README, "Billing"). Sign-up is open
+  and free today: anyone who registers on GeekOAuth and finds the site gets a tenant at `/welcome`.
 
 ## Run it locally
 

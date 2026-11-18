@@ -1,9 +1,20 @@
 # geek-social
 
-The GeekSocial operator screen. GeekSocial runs inside GeekAPI: it watches comments on connected
-Facebook Pages, has Claude classify each comment and draft a reply, and holds every draft for a
-person to approve, edit or reject before it is sent. It also publishes link posts. This app is the
-operator's inbox and controls. It has no database and no platform credentials of its own.
+The GeekSocial operator screen. GeekSocial is a multi-tenant, multi-platform product that runs inside
+GeekAPI: it watches comments on each tenant's connected social accounts, has Claude classify each
+comment and draft a reply, and holds every draft for a person to approve, edit or reject before it is
+sent. It also publishes link posts. This app is the operator's inbox and controls. It has no database
+and no platform credentials of its own.
+
+**Platforms.** In scope: Facebook, Instagram, LinkedIn (organisation and member), Google Business
+Profile, X and TikTok (`plans/geek-social-multi-tenant-connectors-2026-11-16.md`, "Platforms"). Only the
+Facebook Pages connector is built so far; the others are connectors still to build in GeekAPI. The
+screens are platform-neutral, apart from the Facebook connect flow on `/accounts`.
+
+**Billing.** GeekSocial is a paid SaaS, and tenants pay through PayPal. None of that is built yet: today
+`/welcome` creates a tenant for any signed-in person, free of charge. GeekBackend already has a PayPal
+subscription flow for Geek Receptionist (`GeekBackend/docs/Geek-Receptionist.md`, onboarding and billing
+sections).
 
 The contract it is built against is `GeekBackend/docs/GEEK-SOCIAL-API.md`.
 
