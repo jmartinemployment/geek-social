@@ -91,8 +91,8 @@ What they found that needs a decision:
   replacement, which costs a twentieth as much. Changing `GEEK_SOCIAL_AI_MODEL` is a Railway change. Run one live
   triage first, to check that its 400-token output limit is enough.
 - **Nextdoor's Publish API form excludes GeekSocial's use.** It says the API "is not available for promoting your
-  own business or your clients' businesses". Nextdoor's Share Plugin needs no approval, which the roadmap's
-  Nextdoor line does not reflect. See the register's Nextdoor section.
+  own business or your clients' businesses". So the API the roadmap's Nextdoor plan waits for may never be
+  granted for this use. See the register's Nextdoor section.
 - **X is the largest per-tenant cost for any tenant that uses it.** A link post costs $0.200. A flat price loses
   money on a heavy X tenant below $99 (input to Q2).
 - **AI token counts are not kept.** Every model client returns them, and no caller keeps them. So the cost model
