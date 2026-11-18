@@ -9,6 +9,20 @@ The setup detail (Meta app, Railway variables, platform list) is recorded in
 outside this repo and is not repeated here, so the two cannot drift. It is three days old: re-check
 any state it describes before acting on it.
 
+## 2026-11-18: the AI provider is replaceable (roadmap Phase 0, item 1)
+
+Built in GeekBackend and here, on branch `phase0-ai-provider` in both repos, and not deployed. GeekAPI deploys
+every push to `main`, and the new GeekAPI refuses to start while `GEEK_SOCIAL_CLAUDE_CLEARED_PLATFORMS` is set,
+so the branches are merged only after these GeekAPI settings on Railway:
+- remove `GEEK_SOCIAL_CLAUDE_CLEARED_PLATFORMS`;
+- set `GEEK_SOCIAL_AI_CLEARED_PLATFORMS` to the pairs already allowed (for example `anthropic:facebook`), or leave
+  it unset to hold every comment;
+- check that `LlmProviders__DefaultProvider` names the provider GeekSocial should call: GeekSocial now follows it
+  instead of always calling Anthropic.
+
+Then merge GeekBackend first and this repo second, because Activity reads the new `aiProvider` field. Proven by
+tests only (fake HTTP handlers for all five providers); no live call has been made with any provider.
+
 ## Where it stands at the end of 2026-11-16
 
 Every screen now renders on the server (Server Components read GeekAPI through `src/lib/server/social-api.ts`;

@@ -69,7 +69,8 @@ test("a comment whose text was removed after retention says so, never an empty b
 test("an empty tab says why in its own words, and the held tab explains the clearance", () => {
   mount({ tab: held });
   screen.getByText("No comments are held for clearance.");
-  screen.getByText(/GEEK_SOCIAL_CLAUDE_CLEARED_PLATFORMS/);
+  screen.getByText(/only for a platform cleared for that provider/);
+  assert.equal(screen.queryByText(/GEEK_SOCIAL/), null, "no setting name on the screen");
 });
 
 test("a tab where Triage cannot be run again has no Run again button", () => {

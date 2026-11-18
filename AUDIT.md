@@ -135,7 +135,7 @@ Comments, Accounts, Activity and Connect pages.
 | Phase 6 proof on a real Page | Not done; no tests written (finding 4) |
 | Instagram | Capabilities modelled in GeekBackend; no connector; waits on I1 to I6 |
 | LinkedIn | Post-writing code only; no connector; waits on the app and L1 to L5 |
-| Comment-text clearance for LinkedIn, Instagram | Open; `GEEK_SOCIAL_CLAUDE_CLEARED_PLATFORMS` is the gate, becoming per-provider `GEEK_SOCIAL_AI_CLEARED_PLATFORMS` in roadmap Phase 0, item 1 |
+| Comment-text clearance for LinkedIn, Instagram | Open; the gate is `GEEK_SOCIAL_AI_CLEARED_PLATFORMS`, `provider:platform` pairs (roadmap Phase 0, item 1, built) |
 | Optional MCP tools | Not built |
 | Daily retention job vs on-event | Open decision |
 | Plan status "committed, not pushed" | Out of date: `e2c0229` and `d6568df` are on `origin/main` and GeekAPI serves the routes |

@@ -16,8 +16,10 @@ each network, and a tenant connects by signing in. Only the Facebook Pages conne
 others are connectors still to build in GeekAPI. The screens are platform-neutral, apart from the Facebook
 connect flow on `/accounts`.
 
-**AI.** As built, GeekAPI calls only Claude, and the screens say "Claude". Roadmap Phase 0, item 1 makes
-the provider replaceable by configuration. The screens will then name whichever provider is configured.
+**AI.** The AI provider is replaceable by configuration (roadmap Phase 0, item 1): GeekAPI calls whichever of
+Anthropic, OpenAI, Gemini, Perplexity or Groq `LlmProviders__DefaultProvider` names, with no default. Activity
+shows the provider, its model, whether its key is set, and which platforms are cleared for it; the other screens
+say "the AI provider" and quote no setting names. The settings are in `GeekBackend/docs/GEEK-SOCIAL-API.md`.
 
 **Billing.** GeekSocial is a paid SaaS, and tenants pay through PayPal. None of that is built yet: today
 `/welcome` creates a tenant for any signed-in person, free of charge. GeekBackend already has a PayPal

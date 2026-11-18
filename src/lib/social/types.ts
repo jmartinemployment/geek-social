@@ -203,8 +203,20 @@ export interface OrchestratorStatus {
   failures: OrchestratorFailure[];
 }
 
+/** The AI provider GeekAPI is set to call. The key itself is never sent, only whether it is set. */
+export interface AiProviderStatus {
+  id: string;
+  /** The name a person sees, for example "Anthropic" or "OpenAI". */
+  name: string;
+  model: string | null;
+  apiKeySet: boolean;
+}
+
 export interface SocialStatus {
   orchestrator: OrchestratorStatus;
+  /** Null when no AI provider is set on GeekAPI. */
+  aiProvider: AiProviderStatus | null;
+  /** The platforms cleared to send comment text to that provider; empty when none is set. */
   clearedPlatforms: string[];
   metaConfigured: boolean;
   sendLimits: { repliesPerAccountPerHour: number; coolDownMinutes: number };

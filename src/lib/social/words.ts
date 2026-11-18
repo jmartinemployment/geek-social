@@ -20,9 +20,9 @@ export const FAILURE_WORDS: Record<string, string> = {
   conflict: "Something changed first: a reply already exists for that comment, or the draft is no longer in the state shown here.",
   store_unavailable: "GeekSocial's store could not be reached or did not finish the write.",
   encryption_unavailable: "The key that protects stored account sign-ins is missing or unusable, so no account can be used.",
-  not_configured: "The platform's app settings are not set on GeekAPI, so nothing can be called until they are.",
-  clearance_required: "This platform is not cleared to send comment text to Claude, so nothing was sent. Name it in GEEK_SOCIAL_CLAUDE_CLEARED_PLATFORMS on GeekAPI.",
-  model_failed: "Claude could not be reached, refused, or answered outside the shape it was given. It is tried once and never retried.",
+  not_configured: "A setting GeekSocial needs is not set on GeekAPI (a platform's app settings, or the AI provider, its model or its key), so nothing was called.",
+  clearance_required: "This platform is not cleared to send comment text to the AI provider, so nothing was sent. The Activity page shows which provider is set and which platforms are cleared for it.",
+  model_failed: "The AI provider could not be reached, refused, or answered outside the shape it was given. It is tried once and never retried.",
   review_refused: "The Reviewer refused the text. Nothing was saved or sent.",
 };
 
@@ -57,7 +57,7 @@ export const DRAFT_STATUS_WORDS: Record<string, string> = {
 export const TRIAGE_OUTCOME_WORDS: Record<string, string> = {
   reply_needed: "Needs a reply",
   no_reply_needed: "No reply needed",
-  blocked_no_clearance: "Held: platform not cleared for Claude",
+  blocked_no_clearance: "Held: platform not cleared for the AI provider",
   failed: "Triage failed",
   untriaged: "Waiting for Triage",
 };

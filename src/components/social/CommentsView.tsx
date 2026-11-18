@@ -39,13 +39,12 @@ export function CommentsView({
     <div className="mt-4 flex flex-col gap-3">
       {tab.state === "blocked_no_clearance" ? (
         <Notice tone="info">
-          GeekSocial sends a comment to Claude only for a platform named in GEEK_SOCIAL_CLAUDE_CLEARED_PLATFORMS on
-          GeekAPI. Until the platform is named there, its comments are held here and nothing is sent. Once it is set,
-          press Run again on each comment. The{" "}
+          GeekSocial sends a comment to the AI provider only for a platform cleared for that provider. Until the platform
+          is cleared, its comments are held here and nothing is sent. Once it is, press Run again on each comment. The{" "}
           <Link href="/activity" className="font-semibold underline">
             Activity
           </Link>{" "}
-          page shows which platforms are cleared now.
+          page shows which AI provider is set and which platforms are cleared for it now.
         </Notice>
       ) : null}
 

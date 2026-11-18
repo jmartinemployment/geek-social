@@ -45,15 +45,21 @@ const orchestrator = (overrides: Partial<OrchestratorStatus> = {}): Orchestrator
 
 const status = (overrides: Partial<SocialStatus> = {}): SocialStatus => ({
   orchestrator: orchestrator(),
+  aiProvider: { id: "openai", name: "OpenAI", model: "gpt-test", apiKeySet: true },
   clearedPlatforms: ["facebook"],
   metaConfigured: true,
   sendLimits: { repliesPerAccountPerHour: 30, coolDownMinutes: 5 },
   ...overrides,
 });
 
-test("it shows the clearance, the Meta settings, the send limits and the counts", () => {
+test("it shows the AI provider and what is cleared for it, the Meta settings, the send limits and the counts", () => {
   render(<StatusView status={status()} />);
+  screen.getByText("OpenAI");
+  screen.getByText("Model gpt-test");
+  screen.getByText("Cleared for OpenAI");
   screen.getByText("Facebook");
+  assert.equal(screen.queryByText(/Claude/), null);
+  assert.equal(screen.queryByText(/No key set|No model set|No AI provider/), null);
   screen.getByText("Set on GeekAPI");
   screen.getByText(/30 replies per account per hour; a 5 minute cool-down/);
   screen.getByText("Comments taken in");
@@ -66,8 +72,31 @@ test("with no platform cleared and no Meta settings it says both, in red, and wh
   render(<StatusView status={status({ clearedPlatforms: [], metaConfigured: false })} />);
   screen.getByText("No platform");
   screen.getByText("Not set on GeekAPI");
-  screen.getByText(/No platform is cleared, so every new comment is held/);
+  screen.getByText(/No platform is cleared for OpenAI, so every new comment is held and nothing is sent to OpenAI/);
+  screen.getByText(/a change of provider clears none/);
   screen.getByText(/The Meta app id, secret and verify token are not set on GeekAPI/);
+  assert.equal(screen.queryByText(/GEEK_SOCIAL|LlmProviders/), null, "no setting name on the screen");
+});
+
+test("with no AI provider it says so, in red, and that nothing is sent", () => {
+  render(<StatusView status={status({ aiProvider: null, clearedPlatforms: [] })} />);
+  screen.getByText("Not set on GeekAPI");
+  screen.getByText("Cleared platforms");
+  screen.getByText(/No AI provider is set on GeekAPI, so every new comment is held/);
+  assert.equal(screen.queryByText(/No platform is cleared for/), null);
+  assert.equal(screen.queryByText(/GEEK_SOCIAL|LlmProviders/), null, "no setting name on the screen");
+});
+
+test("a provider with no model or no key says which is missing and that every call fails", () => {
+  render(<StatusView status={status({ aiProvider: { id: "gemini", name: "Google Gemini", model: null, apiKeySet: false } })} />);
+  screen.getByText("No model set");
+  screen.getByText("No key set");
+  screen.getByText(/Google Gemini is the AI provider, but its model and key are not set on GeekAPI/);
+  cleanup();
+
+  render(<StatusView status={status({ aiProvider: { id: "groq", name: "Groq", model: "m", apiKeySet: false } })} />);
+  screen.getByText(/Groq is the AI provider, but its key is not set on GeekAPI, so every AI call fails/);
+  assert.equal(screen.queryByText("No model set"), null);
 });
 
 test("orchestrator failures are listed with when, which step and what it means", () => {

@@ -21,14 +21,31 @@ const COUNTS: { key: Exclude<keyof OrchestratorStatus, "recoveredAt" | "failures
   { key: "eventsScrubbed", label: "Comments whose text was removed after retention" },
 ];
 
-/** The orchestrator's counts and failures, clearance, Meta settings and send limits. Pure display. */
+/** The orchestrator's counts and failures, the AI provider and its clearance, Meta settings and send limits. Pure display. */
 export function StatusView({ status }: { status: SocialStatus }) {
   const o = status.orchestrator;
+  const ai = status.aiProvider;
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-lg border border-border bg-background px-4 py-3">
-          <p className="text-xs font-semibold text-muted">Cleared for Claude</p>
+          <p className="text-xs font-semibold text-muted">AI provider</p>
+          {ai ? (
+            <>
+              <p className="mt-1 text-sm text-foreground">{ai.name}</p>
+              {ai.model ? (
+                <p className="text-xs text-muted">Model {ai.model}</p>
+              ) : (
+                <p className="text-xs font-semibold text-red-700">No model set</p>
+              )}
+              {ai.apiKeySet ? null : <p className="text-xs font-semibold text-red-700">No key set</p>}
+            </>
+          ) : (
+            <p className="mt-1 text-sm font-semibold text-red-700">Not set on GeekAPI</p>
+          )}
+        </div>
+        <div className="rounded-lg border border-border bg-background px-4 py-3">
+          <p className="text-xs font-semibold text-muted">{ai ? `Cleared for ${ai.name}` : "Cleared platforms"}</p>
           {status.clearedPlatforms.length > 0 ? (
             <p className="mt-1 text-sm text-foreground">
               {status.clearedPlatforms.map(platformWords).join(", ")}
@@ -52,12 +69,22 @@ export function StatusView({ status }: { status: SocialStatus }) {
         </div>
       </div>
 
-      {status.clearedPlatforms.length === 0 ? (
+      {!ai ? (
         <Notice tone="warn">
-          No platform is cleared, so every new comment is held and nothing is sent to Claude. Comments
-          are held until GEEK_SOCIAL_CLAUDE_CLEARED_PLATFORMS on GeekAPI names the platform (for
-          example, facebook). After it is set and GeekAPI restarts, run the held comments again from the
-          Comments page.
+          No AI provider is set on GeekAPI, so every new comment is held, nothing is sent to any AI provider, and no post
+          copy can be suggested.
+        </Notice>
+      ) : !ai.model || !ai.apiKeySet ? (
+        <Notice tone="warn">
+          {ai.name} is the AI provider, but its {!ai.model && !ai.apiKeySet ? "model and key are" : !ai.model ? "model is" : "key is"}{" "}
+          not set on GeekAPI, so every AI call fails and nothing is sent.
+        </Notice>
+      ) : null}
+      {ai && status.clearedPlatforms.length === 0 ? (
+        <Notice tone="warn">
+          No platform is cleared for {ai.name}, so every new comment is held and nothing is sent to {ai.name}. A platform
+          is cleared for one AI provider at a time, so a change of provider clears none. Once a platform is cleared and
+          GeekAPI restarts, run the held comments again from the Comments page.
         </Notice>
       ) : null}
       {!status.metaConfigured ? (
