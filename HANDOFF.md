@@ -23,6 +23,35 @@ follows it, so it calls OpenAI. OpenAI is not cleared for Facebook, so every Fac
 OpenAI), or the provider is changed. Post copy needs no clearance and goes to OpenAI. Proven by tests only (fake
 HTTP handlers for all five providers); no live AI call has been made since the deploy.
 
+## 2026-11-18: Phase 0 items 2 to 7 deployed
+
+Each was deployed backend first, then this repo; every Railway deploy ended SUCCESS on all three services, and
+every Vercel production deployment is READY.
+
+| Item | GeekBackend | This repo |
+|---|---|---|
+| 2. Auto-send removed: a person approves every reply | `3f2a7ca8` | `fbe66b7` |
+| 3. Status is per tenant, failures kept 30 days (migration 0073 applied at GeekRepository startup) | `6582f02d` | `bdef3d2` |
+| 4. `connect/meta/start` and `posts/copy` check the tenant; `posts/copy` needs the AI terms | `22598962` | (none) |
+| 5. The post form offers only what the network accepts, read from `GET /api/social/platforms` | `d2a661b1` | `2e80e0c` |
+| 6. Wording: no setting names or Meta setup steps on the screens, "accounts" not "Pages", the AI terms name the commenter's name and the post-suggestion data, post copy names the tenant's business | `63304119` | `4860e39` |
+| 7. Cross-tenant tests for every GeekAPI social route (`SocialRouteTenantIsolationTests`); they gate every release | `dd6f20aa` | (none) |
+
+Proven by tests only, not yet on the live site: none of these has been used signed in. The status queries
+(item 3) run only against Railway's Postgres; CI does not run the integration tests. The AI terms' text changed
+in item 6; a tenant that accepted before then accepted the earlier text, and nothing asks them again (roadmap
+Q18).
+
+**Legal pages, drafted and not published.** `/privacy` and `/terms` are on the local branch `legal-pages`
+(`9aa80c4`), not pushed, because main deploys publicly and the text needs the owner's approval. Before they
+can go public:
+- The 30-day deletion they promise is not built: only LinkedIn sets `text_expires_at`, Facebook comment text
+  and names are never purged, and drafts are not deleted with their comment. No Phase 0 item builds it.
+- Governing law is proposed as Florida (Palm Beach County) and is not confirmed.
+- The owner accepts the process promises: deletion within 30 days on request by email, notice before an AI
+  provider change, and the Facebook menu path for removing the app.
+- The tenant-isolation statement is now backed by items 4 and 7.
+
 ## Where it stands at the end of 2026-11-16
 
 Every screen now renders on the server (Server Components read GeekAPI through `src/lib/server/social-api.ts`;
@@ -159,8 +188,11 @@ displayed as it came), and a refused token is never replaced with another creden
 
 ## Next steps, in order
 
-1. Sign in by hand on `geek-social.geekatyourspot.com` (register, confirm by email, sign in), complete
-   `/welcome`, then use each screen and fix what the real services show.
+1. Phase 0's live walkthrough (roadmap, "Verification, every phase"): sign in by hand on
+   `geek-social.geekatyourspot.com` (register, confirm by email, sign in), complete `/welcome`, then use each
+   screen and fix what the real services show. Check: live updates connect with no "Live updates are off"
+   banner; Activity shows only this tenant's numbers and names the AI provider; no auto-send setting appears;
+   `/robots.txt` disallows all; the post form offers only what Facebook accepts.
 2. Confirm the external state: GeekAPI Railway variables, migration 0064 on Railway, Meta app login
    configuration and webhook, GeekOAuth client redirect URIs (GeekBackend handoff, "Railway variables"
    and "Meta app settings").
