@@ -11,17 +11,17 @@ any state it describes before acting on it.
 
 ## 2026-11-18: the AI provider is replaceable (roadmap Phase 0, item 1)
 
-Built in GeekBackend and here, on branch `phase0-ai-provider` in both repos, and not deployed. GeekAPI deploys
-every push to `main`, and the new GeekAPI refuses to start while `GEEK_SOCIAL_CLAUDE_CLEARED_PLATFORMS` is set,
-so the branches are merged only after these GeekAPI settings on Railway:
-- remove `GEEK_SOCIAL_CLAUDE_CLEARED_PLATFORMS`;
-- set `GEEK_SOCIAL_AI_CLEARED_PLATFORMS` to the pairs already allowed (for example `anthropic:facebook`), or leave
-  it unset to hold every comment;
-- check that `LlmProviders__DefaultProvider` names the provider GeekSocial should call: GeekSocial now follows it
-  instead of always calling Anthropic.
+Deployed: GeekBackend `b5fd0ede` (Railway deployment `5880ee59`, started cleanly) and this repo `68b8e37`
+(Vercel `dpl_E4Kf9znTTYXJLWrC8jt3qVdzrUAS`, READY). Before the GeekAPI deploy, on Railway:
+- `GEEK_SOCIAL_CLAUDE_CLEARED_PLATFORMS` (`facebook`, cleared for Claude) was removed, because the new GeekAPI
+  refuses to start while it is set;
+- `GEEK_SOCIAL_AI_CLEARED_PLATFORMS` was set to `anthropic:facebook`, the same clearance in the new form.
 
-Then merge GeekBackend first and this repo second, because Activity reads the new `aiProvider` field. Proven by
-tests only (fake HTTP handlers for all five providers); no live call has been made with any provider.
+`LlmProviders__DefaultProvider` is `OpenAI` (Content Creator's setting) and was left as it is. GeekSocial now
+follows it, so it calls OpenAI. OpenAI is not cleared for Facebook, so every Facebook comment is held
+(`blocked_no_clearance`) and no comment text is sent until `openai:facebook` is added (after M4 is checked for
+OpenAI), or the provider is changed. Post copy needs no clearance and goes to OpenAI. Proven by tests only (fake
+HTTP handlers for all five providers); no live AI call has been made since the deploy.
 
 ## Where it stands at the end of 2026-11-16
 
