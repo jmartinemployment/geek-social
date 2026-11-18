@@ -50,14 +50,18 @@ function AiTermsForm({ action }: { action: WelcomeAction }) {
   return (
     <form action={formAction} className="flex max-w-xl flex-col gap-4">
       <p className="text-sm text-foreground">
-        GeekSocial can draft replies to the comments on your accounts with an AI model. To do that, it sends the text of a
-        comment, and the post it is under, to the model, for your account only. A person on your team approves every reply
-        before anything is posted, and comments are kept for at most 30 days. Until you agree, comments are held and are not sent
-        to the model, and you write the replies yourself.
+        GeekSocial can draft replies to the comments on your accounts with an AI provider. To do that, it sends the text of
+        a comment, the commenter&apos;s name and the post it is under to the AI provider, for your business only. When you ask
+        it to suggest a post, it sends the article&apos;s address, title and summary, and your business&apos;s name. A person on
+        your team approves every reply before anything is posted, and comments are kept for at most 30 days. Until you
+        agree, comments are held and nothing is sent to the AI provider, and you write the replies and posts yourself.
       </p>
       <label className="flex items-start gap-2 text-sm font-medium text-foreground">
         <input type="checkbox" name="agree" required className={`${checkboxClass} mt-0.5`} />
-        <span>I agree that GeekSocial may send my comments to an AI model to draft replies for me.</span>
+        <span>
+          I agree that GeekSocial may send my comments, with the commenters&apos; names, and the articles I ask it to post
+          about, to an AI provider to draft replies and posts for me.
+        </span>
       </label>
       {state.error ? (
         <p role="alert" className="text-sm text-red-700">

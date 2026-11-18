@@ -233,11 +233,12 @@ export function postApi(call: Transport) {
 
 // Status and audit
 
-/** The status call over one transport. */
+/** What a post may carry on each platform, from GeekAPI's capability matrix. */
 export function platformsApi(call: Transport) {
   return { list: () => call<PlatformCapabilities[]>("GET", "/platforms") };
 }
 
+/** The status call over one transport. */
 export function statusApi(call: Transport) {
   return { get: () => call<SocialStatus>("GET", "/status") };
 }

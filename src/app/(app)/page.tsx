@@ -32,7 +32,7 @@ export default async function InboxPage({
   return (
     <PageFrame
       title="Inbox"
-      intro="Replies the AI drafted for comments on your connected Pages. Nothing is sent until you approve it."
+      intro="Replies the AI drafted for comments on your connected accounts. Nothing is sent until you approve it."
     >
       <Panel aside={<UrlAccountFilter accounts={accounts} value={accountId} />}>
         {unknown ? (

@@ -33,9 +33,7 @@ export function ConnectPanel({ actions }: { actions: AccountActions }) {
     <Panel title="Connect a Facebook Page">
       <p className="text-sm text-muted">
         Sends you to Meta to choose the Pages GeekSocial may manage, then back here. Use it again to reconnect a Page
-        whose sign-in the platform refused. The address{" "}
-        <code className="rounded bg-surface-muted px-1 text-xs">/connect/meta/callback</code> on this site must be listed
-        under Valid OAuth Redirect URIs in the Meta app.
+        whose sign-in the platform refused.
       </p>
       <form action={connect} className="mt-4 flex flex-wrap items-center gap-3">
         <button type="submit" disabled={pending} className={primaryButton}>
@@ -140,7 +138,7 @@ function AccountCard({ account, actions }: { account: SocialAccount; actions: Ac
         <div className="mt-3">
           <Notice tone="warn">
             The platform refused this account&apos;s sign-in: it expired, was revoked, or lost a permission. Nothing is
-            read or sent for it until you connect the Page again above.
+            read or sent for it until you connect it again above.
           </Notice>
         </div>
       ) : null}

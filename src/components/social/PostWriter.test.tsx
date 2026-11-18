@@ -119,12 +119,12 @@ test("a platform write whose outcome GeekAPI could not confirm is held off the s
   assert.equal(publishButton().disabled, true);
 });
 
-test("Publish is allowed again only after the person says they checked the Page", async () => {
+test("Publish is allowed again only after the person says they checked the account", async () => {
   mount({ ...unused, publish: async () => Promise.reject(new SocialApiError("Gateway Timeout", 504, null, [])) });
   fillForm();
   click("Publish");
   await screen.findByText("Publishing did not get a clear answer.");
-  click("I checked the Page: allow Publish again");
+  click("I checked the account: allow Publish again");
   assert.equal(publishButton().disabled, false);
   assert.equal(screen.queryByText("Publishing did not get a clear answer."), null);
 });

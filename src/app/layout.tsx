@@ -22,7 +22,7 @@ const body = localFont({
 
 export const metadata: Metadata = {
   title: "GeekSocial",
-  description: "Approve, edit or reject reply drafts, and publish link posts, for Geek @ Your Spot.",
+  description: "Approve, edit or reject reply drafts, and publish link posts, for your business's social accounts.",
 };
 
 export default function RootLayout({

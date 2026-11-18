@@ -85,6 +85,14 @@ test("a tenant that has not agreed sees the terms and the agree form, and the in
   assert.equal(screen.getByRole("link", { name: "Open the inbox" }).getAttribute("href"), "/");
 });
 
+test("the terms name everything that goes to the AI provider: the comment, the commenter's name, the post, and an article with the business's name", () => {
+  mount({ tenant: tenant(null) });
+  const text = (document.body.textContent ?? "").replace(/\s+/g, " ");
+  assert.match(text, /the text of a comment, the commenter's name and the post it is under to the AI provider/);
+  assert.match(text, /the article's address, title and summary, and your business's name/);
+  assert.match(text, /my comments, with the commenters' names, and the articles I ask it to post about, to an AI provider/);
+});
+
 test("agreeing runs the terms action, and a failure is said inline", async () => {
   let ran = 0;
   mount({

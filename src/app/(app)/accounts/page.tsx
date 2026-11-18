@@ -12,7 +12,7 @@ export default async function AccountsPage() {
   return (
     <PageFrame
       title="Accounts"
-      intro="The Pages GeekSocial watches and replies from. Settings change only when you press Save."
+      intro="The accounts GeekSocial watches and replies from. Settings change only when you press Save."
     >
       <AppConnectPanel />
       <AppAccountsView accounts={accounts} />

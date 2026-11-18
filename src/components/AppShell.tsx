@@ -36,8 +36,8 @@ function HubBanner() {
   return (
     <div role="alert" className="flex flex-wrap items-center gap-3 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 sm:px-6 lg:px-8">
       <span>
-        Live updates are off: {state.reason} Pages show what they last read and do not change on
-        their own.
+        Live updates are off: {state.reason} The screens show what they last read and do not change
+        on their own.
       </span>
       <button type="button" onClick={reconnect} className="font-semibold underline">
         Reconnect

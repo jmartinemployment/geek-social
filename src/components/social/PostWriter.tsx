@@ -39,7 +39,7 @@ const orNull = (value: string) => (value.trim() === "" ? null : value.trim());
  * posts, a link title, description and picture only where the network takes them (Facebook reads them from the page),
  * and a title required where the network needs one. A field the network does not take is never sent. The fields are
  * this form's own state until Publish; a publish that gets no clear answer keeps Publish off until the person has looked
- * at the Page.
+ * at the account on its network.
  */
 export function PostWriter({
   accounts,
@@ -58,7 +58,7 @@ export function PostWriter({
   const [violations, setViolations] = useState<string[]>([]);
   const [published, setPublished] = useState<string | null>(null);
   // Set when a publish got no clear answer: the post may be live, so Publish stays off until the
-  // operator has looked at the Page.
+  // operator has looked at the account on its network.
   const [uncertain, setUncertain] = useState<string | null>(null);
 
   const capabilitiesOf = (a: SocialAccount) => platforms.find((p) => p.platform === a.platform) ?? null;
@@ -276,10 +276,11 @@ export function PostWriter({
             <p className="font-semibold">Publishing did not get a clear answer.</p>
             <p>{uncertain}</p>
             <p>
-              Check the Page and the Published posts list below. Publishing again could post it twice.
+              Check the account on its network and the Published posts list below. Publishing again could post it
+              twice.
             </p>
             <button type="button" onClick={() => setUncertain(null)} className={`${quietButton} mt-2`}>
-              I checked the Page: allow Publish again
+              I checked the account: allow Publish again
             </button>
           </Notice>
         </div>

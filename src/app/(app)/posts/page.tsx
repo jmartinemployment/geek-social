@@ -42,7 +42,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
           </div>
         ) : null}
         {chosen === null ? (
-          <Notice tone="warn">No Page is connected. Connect one on Accounts, and its posts are listed here.</Notice>
+          <Notice tone="warn">No account is connected. Connect one on Accounts, and its posts are listed here.</Notice>
         ) : (
           <Suspense key={chosen.id} fallback={<Loading what="posts" />}>
             <PublishedPosts accountId={chosen.id} accounts={accounts} />
