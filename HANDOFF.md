@@ -105,6 +105,33 @@ What they found that needs a decision:
 - **`PLATFORM-CAPABILITIES.md` corrected.** Three LinkedIn lines now match its own section 2j: webhooks need the
   Standard tier, the payload can carry comment text, and whether technical sign-off gates Standard is UNVERIFIED.
 
+## 2026-11-19: Phase 0 item 9, the public pages checked against each platform
+
+Item 9's check of robots.txt and the noindex header is done, and it found that the privacy policy and terms are not
+enough. Each platform's own pages were read on 2026-11-19, and every quote was checked at its source. The result
+is in the access register: `GeekBackend/docs/PLATFORM-ACCESS-REGISTER.md`, "What the applications require of the
+public pages".
+
+- **A public homepage is needed.** Google (YouTube, and Google Business Profile if its scope needs verification) and
+  TikTok refuse a website that is a login page or redirects. Google wants the homepage to describe the app, link the
+  privacy policy, and sit on the same domain as the policy. TikTok wants the privacy and terms links visible on it.
+  Today `/` sends a signed-out visitor to sign-in (307), and geekatyourspot.com has no GeekSocial page.
+- **robots.txt must let Meta's crawler reach every URL in the Meta app's settings,** not only the policy: Meta
+  checks them with its crawler and treats a broken policy link as a violation. The `legal-pages` branch allows only
+  `/privacy` and `/terms`. The live site already answers Meta's crawler user agents with 200 and gzip.
+- **`noindex` can stay:** no platform states a rule about it.
+- **Reviewers need a way in.** Meta forbids sending anyone's personal credentials, LinkedIn asks for test
+  credentials, and TikTok and Pinterest want a demo video. So reviews need a GeekSocial account that is not anyone's
+  personal one, with its own confirmed email.
+- **GeekOAuth's Login and Register pages link no privacy policy** (`d47edfe`). X wants the policy displayed before
+  people sign up. The draft links it from `/signed-out` and `/welcome`.
+- **The Google connectors will add content:** the YouTube terms link, agreement to the policy before use, and
+  Google's Limited Use statement. They are added when those connectors are built.
+
+The 30-day purge was checked again (GeekBackend `d6cde72c`). It is still not built: only one platform sets a
+text deadline (`CommentTextRetention`, 48 hours, `SocialPlatforms.cs:224`). Facebook comment text and names are
+never purged, and the purge does not touch drafts.
+
 ## Where it stands at the end of 2026-11-16
 
 Every screen now renders on the server (Server Components read GeekAPI through `src/lib/server/social-api.ts`;
@@ -250,6 +277,12 @@ displayed as it came), and a refused token is never replaced with another creden
    - Choose the AI provider and model, given `gpt-4.1`'s shutdown, and clear it for Facebook. Either add
      `openai:facebook` once M4 is checked for OpenAI, or switch to Anthropic, which is cleared.
    - Approve the legal pages' text and governing law, and their push (this repo is public).
+   - Choose the public homepage the applications name: a page at `/` for signed-out visitors (the Inbox stays at
+     `/` once signed in), the Inbox moved off `/`, or a page on geekatyourspot.com. Google wants the homepage and
+     the privacy policy on the same domain, and TikTok wants the site in the demo video to match it, so a page on
+     `geek-social.geekatyourspot.com` fits both. Its text is public content, so it needs approval like the legal
+     pages.
+   - Create the reviewers' account: a GeekOAuth sign-up and tenant with its own mailbox, not anyone's personal one.
    - Decide whether connector contract gaps 1 and 2, and keeping the AI token counts, are built now.
    - Decide Nextdoor's plan.
 2. Phase 0's live walkthrough, part 2 (part 1 is above): connect a Page on `/accounts`, read `/activity`, comment
